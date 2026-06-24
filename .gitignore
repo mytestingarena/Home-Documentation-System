@@ -1,0 +1,25 @@
+# Secrets and local overrides
+incur/config.local.php
+*.env
+.env.*
+
+# User uploads (never commit house data)
+incur/uploads/photos/*
+!incur/uploads/photos/.gitkeep
+incur/uploads/receipts/*
+!incur/uploads/receipts/.gitkeep
+incur/uploads/manuals/*
+!incur/uploads/manuals/.gitkeep
+incur/uploads/designs/*
+!incur/uploads/designs/.gitkeep
+
+# Database dumps and backups
+*.sql
+backup*
+*.bak
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
