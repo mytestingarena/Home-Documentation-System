@@ -1,7 +1,7 @@
 <?php
 // tabs/utility.php — Utility Services tab
 
-global $conn, $house_id;
+global $conn, $house_id, $hds_ui_settings;
 
 $receipts_uploaded = false;
 if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'][0])) {
@@ -18,6 +18,7 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
 
 <div class="utility-stack">
 
+    <?php if (hds_ui_section_enabled('utility-electric', $hds_ui_settings)): ?>
     <details class="utility-block utility-block--electric collapsible-section" id="utility-electric">
         <summary class="collapsible-summary">
             <i class="fas fa-chevron-right collapsible-chevron" aria-hidden="true"></i>
@@ -71,7 +72,9 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
         </div>
         </div>
     </details>
+    <?php endif; ?>
 
+    <?php if (hds_ui_section_enabled('utility-generator', $hds_ui_settings)): ?>
     <details class="utility-block utility-block--generator collapsible-section" id="utility-generator">
         <summary class="collapsible-summary">
             <i class="fas fa-chevron-right collapsible-chevron" aria-hidden="true"></i>
@@ -98,7 +101,9 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
         </form>
         </div>
     </details>
+    <?php endif; ?>
 
+    <?php if (hds_ui_section_enabled('utility-water', $hds_ui_settings)): ?>
     <details class="utility-block utility-block--water collapsible-section" id="utility-water">
         <summary class="collapsible-summary">
             <i class="fas fa-chevron-right collapsible-chevron" aria-hidden="true"></i>
@@ -194,7 +199,9 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
         </div>
         </div>
     </details>
+    <?php endif; ?>
 
+    <?php if (hds_ui_section_enabled('utility-propane', $hds_ui_settings)): ?>
     <details class="utility-block utility-block--propane collapsible-section" id="utility-propane">
         <summary class="collapsible-summary">
             <i class="fas fa-chevron-right collapsible-chevron" aria-hidden="true"></i>
@@ -277,5 +284,6 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
         </div>
         </div>
     </details>
+    <?php endif; ?>
 
 </div>

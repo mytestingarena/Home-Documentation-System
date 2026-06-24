@@ -1,11 +1,12 @@
 <?php
 // tabs/manuals.php — User Manuals tab content
 
-global $conn, $house_id;
+global $conn, $house_id, $hds_ui_settings;
 ?>
 
 <h2>User Manual PDFs</h2>
 
+<?php if (hds_ui_section_enabled('manuals-upload', $hds_ui_settings)): ?>
 <div class="section-card">
     <h3>Upload Manuals</h3>
     <form method="post" enctype="multipart/form-data">
@@ -14,7 +15,9 @@ global $conn, $house_id;
         <input type="submit" name="upload_manuals" value="Upload Manuals">
     </form>
 </div>
+<?php endif; ?>
 
+<?php if (hds_ui_section_enabled('manuals-list', $hds_ui_settings)): ?>
 <div class="section-card manual-list">
     <h3>Uploaded Manuals</h3>
     <?php
@@ -45,3 +48,4 @@ global $conn, $house_id;
     }
     ?>
 </div>
+<?php endif; ?>

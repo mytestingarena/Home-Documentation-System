@@ -1,7 +1,7 @@
 <?php
 // tabs/media.php — Media tab content
 
-global $conn, $house_id;
+global $conn, $house_id, $hds_ui_settings;
 ?>
 
 <h2>Media</h2>
@@ -69,6 +69,10 @@ function photo_grid($conn, $house_id, $section, $is_ir, $order_by, $where) {
 }
 
 function render_media_section(string $id, string $title, string $section, int $is_ir, string $accept, string $button_label, string $help_text, $conn, $house_id, $order_by, $where): void {
+    global $hds_ui_settings;
+    if (!hds_ui_section_enabled('media-' . $id, $hds_ui_settings)) {
+        return;
+    }
     echo "<details class='section-card media-section-card collapsible-section' id='media-$id'>";
     echo "<summary class='collapsible-summary'>";
     echo "<i class='fas fa-chevron-right collapsible-chevron' aria-hidden='true'></i>";

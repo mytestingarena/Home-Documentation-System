@@ -7,6 +7,12 @@ if (!defined('WIFI_TAB_PASSWORD')) {
     define('WIFI_TAB_PASSWORD', 'change_me_before_deploy');
 }
 
+if (!defined('ADMIN_TAB_PASSWORD')) {
+    define('ADMIN_TAB_PASSWORD', WIFI_TAB_PASSWORD);
+}
+
+require_once __DIR__ . '/includes/ui-settings.php';
+
 if (session_status() === PHP_SESSION_NONE) {
     @session_start();
 }
@@ -25,10 +31,14 @@ if ($result->num_rows == 0) {
 $house = $result->fetch_assoc();
 $house_name = htmlspecialchars($house['name'] ?? 'Unknown House');
 
-$valid_tabs = ['permanent', 'utility', 'household', 'tools', 'maintenance', 'media', 'designs', 'manuals', 'map', 'wifi', 'projects'];
+$valid_tabs = ['permanent', 'utility', 'household', 'tools', 'maintenance', 'media', 'designs', 'manuals', 'map', 'wifi', 'projects', 'admin'];
+$hds_ui_settings = hds_ui_load_settings($conn, $house_id);
 $active_tab = $_GET['tab'] ?? 'permanent';
 if (!in_array($active_tab, $valid_tabs, true)) {
     $active_tab = 'permanent';
+}
+if ($active_tab !== 'admin' && !hds_ui_tab_enabled($active_tab, $hds_ui_settings)) {
+    $active_tab = hds_ui_first_enabled_tab($hds_ui_settings);
 }
 
 function house_redirect(int $house_id, string $tab = 'permanent', $open_section = 0, string $open_param = 'open_equipment'): void {
@@ -67,6 +77,49 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['wifi_lock'])) {
         unset($_SESSION['wifi_unlocked']);
         house_redirect($house_id, 'wifi');
+    }
+
+    // ADMIN TAB - UNLOCK / LOCK
+    if (isset($_POST['admin_unlock'])) {
+        $access_password = $_POST['admin_access_password'] ?? '';
+        if (hash_equals(ADMIN_TAB_PASSWORD, $access_password)) {
+            $_SESSION['admin_unlocked'] = true;
+            unset($_SESSION['admin_error']);
+        } else {
+            $_SESSION['admin_error'] = 'Incorrect password. Please try again.';
+        }
+        house_redirect($house_id, 'admin');
+    }
+
+    if (isset($_POST['admin_lock'])) {
+        unset($_SESSION['admin_unlocked']);
+        house_redirect($house_id, 'admin');
+    }
+
+    if (isset($_POST['save_ui_settings']) && !empty($_SESSION['admin_unlocked'])) {
+        $enabled_keys = $_POST['ui_enabled'] ?? [];
+        if (!is_array($enabled_keys)) {
+            $enabled_keys = [];
+        }
+        $allowed = array_flip(hds_ui_all_setting_keys());
+        $enabled_lookup = [];
+        foreach ($enabled_keys as $key) {
+            $key = (string)$key;
+            if (isset($allowed[$key])) {
+                $enabled_lookup[$key] = true;
+            }
+        }
+
+        $conn->query("DELETE FROM house_ui_settings WHERE house_id = $house_id");
+        foreach (hds_ui_all_setting_keys() as $key) {
+            $enabled = isset($enabled_lookup[$key]) ? 1 : 0;
+            $safe_key = mysqli_real_escape_string($conn, $key);
+            $conn->query("INSERT INTO house_ui_settings (house_id, setting_key, enabled)
+                          VALUES ($house_id, '$safe_key', $enabled)");
+        }
+
+        header('Location: house.php?id=' . $house_id . '&tab=admin&admin_saved=1');
+        exit;
     }
 
     // PERMANENT ITEMS UPDATE
@@ -830,8 +883,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260624a">
-    <script src="scripts.js?v=20260624a"></script>
+    <link rel="stylesheet" href="styles.css?v=20260624b">
+    <script src="scripts.js?v=20260624b"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -850,72 +903,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
 
         <nav class="tab-menu" id="tabMenu">
-            <button class="tablink <?php echo $active_tab === 'permanent' ? 'active' : ''; ?>" onclick="openTab(event, 'permanent')"><i class="fas fa-tools"></i> Permanent Items</button>
-            <button class="tablink <?php echo $active_tab === 'utility' ? 'active' : ''; ?>" onclick="openTab(event, 'utility')"><i class="fas fa-bolt"></i> Utility Services</button>
-            <button class="tablink <?php echo $active_tab === 'household' ? 'active' : ''; ?>" onclick="openTab(event, 'household')"><i class="fas fa-home"></i> Household Items</button>
-            <button class="tablink <?php echo $active_tab === 'tools' ? 'active' : ''; ?>" onclick="openTab(event, 'tools')"><i class="fas fa-toolbox"></i> Tools</button>
-            <button class="tablink <?php echo $active_tab === 'maintenance' ? 'active' : ''; ?>" onclick="openTab(event, 'maintenance')"><i class="fas fa-oil-can"></i> Maintenance</button>
-            <button class="tablink <?php echo $active_tab === 'media' ? 'active' : ''; ?>" onclick="openTab(event, 'media')"><i class="fas fa-images"></i> Media</button>
-            <button class="tablink <?php echo $active_tab === 'designs' ? 'active' : ''; ?>" onclick="openTab(event, 'designs')"><i class="fas fa-drafting-compass"></i> Designs</button>
-            <button class="tablink <?php echo $active_tab === 'manuals' ? 'active' : ''; ?>" onclick="openTab(event, 'manuals')"><i class="fas fa-book"></i> User Manuals</button>
-            <button class="tablink <?php echo $active_tab === 'map' ? 'active' : ''; ?>" onclick="openTab(event, 'map')"><i class="fas fa-map-marker-alt"></i> Map Location</button>
-            <button class="tablink <?php echo $active_tab === 'wifi' ? 'active' : ''; ?>" onclick="openTab(event, 'wifi')"><i class="fas fa-wifi"></i> WiFi</button>
-            <button class="tablink <?php echo $active_tab === 'projects' ? 'active' : ''; ?>" onclick="openTab(event, 'projects')"><i class="fas fa-tasks"></i> Project List</button>
+            <?php foreach (hds_ui_registry()['tabs'] as $tab_key => $tab_meta): ?>
+                <?php if (!hds_ui_tab_enabled($tab_key, $hds_ui_settings)) continue; ?>
+                <button class="tablink <?php echo $active_tab === $tab_key ? 'active' : ''; ?>" onclick="openTab(event, '<?php echo htmlspecialchars($tab_key, ENT_QUOTES, 'UTF-8'); ?>')"><i class="fas <?php echo htmlspecialchars($tab_meta['icon'], ENT_QUOTES, 'UTF-8'); ?>"></i> <?php echo htmlspecialchars($tab_meta['label'], ENT_QUOTES, 'UTF-8'); ?></button>
+            <?php endforeach; ?>
+            <button class="tablink tablink--admin <?php echo $active_tab === 'admin' ? 'active' : ''; ?>" onclick="openTab(event, 'admin')"><i class="fas fa-sliders"></i> Admin</button>
         </nav>
     </header>
 
     <h1><?php echo $house_name; ?></h1>
 
     <!-- Tab contents -->
-    <div id="permanent" class="tab" style="display: <?php echo $active_tab === 'permanent' ? 'block' : 'none'; ?>;">
-        <?php include __DIR__ . '/tabs/permanent.php'; ?>
-    </div>
+    <?php foreach (hds_ui_registry()['tabs'] as $tab_key => $tab_meta): ?>
+        <?php if (!hds_ui_tab_enabled($tab_key, $hds_ui_settings)) continue; ?>
+        <div id="<?php echo htmlspecialchars($tab_key, ENT_QUOTES, 'UTF-8'); ?>" class="tab" style="display: <?php echo $active_tab === $tab_key ? 'block' : 'none'; ?>;">
+            <?php
+            $tab_file = __DIR__ . '/tabs/' . $tab_key . '.php';
+            if (file_exists($tab_file)) {
+                include $tab_file;
+            } else {
+                echo "<p class='empty-note'>Tab file is missing on the server: tabs/" . htmlspecialchars($tab_key, ENT_QUOTES, 'UTF-8') . ".php</p>";
+            }
+            ?>
+        </div>
+    <?php endforeach; ?>
 
-    <div id="utility" class="tab" style="display: <?php echo $active_tab === 'utility' ? 'block' : 'none'; ?>;">
-        <?php include __DIR__ . '/tabs/utility.php'; ?>
-    </div>
-
-    <div id="household" class="tab" style="display: <?php echo $active_tab === 'household' ? 'block' : 'none'; ?>;">
-        <?php include __DIR__ . '/tabs/household.php'; ?>
-    </div>
-
-    <div id="tools" class="tab" style="display: <?php echo $active_tab === 'tools' ? 'block' : 'none'; ?>;">
-        <?php include __DIR__ . '/tabs/tools.php'; ?>
-    </div>
-
-    <div id="maintenance" class="tab" style="display: <?php echo $active_tab === 'maintenance' ? 'block' : 'none'; ?>;">
-        <?php include __DIR__ . '/tabs/maintenance.php'; ?>
-    </div>
-
-    <div id="media" class="tab" style="display: <?php echo $active_tab === 'media' ? 'block' : 'none'; ?>;">
-        <?php include __DIR__ . '/tabs/media.php'; ?>
-    </div>
-
-    <div id="designs" class="tab" style="display: <?php echo $active_tab === 'designs' ? 'block' : 'none'; ?>;">
-        <?php include __DIR__ . '/tabs/designs.php'; ?>
-    </div>
-
-    <div id="manuals" class="tab" style="display: <?php echo $active_tab === 'manuals' ? 'block' : 'none'; ?>;">
-        <?php include __DIR__ . '/tabs/manuals.php'; ?>
-    </div>
-
-    <div id="map" class="tab" style="display: <?php echo $active_tab === 'map' ? 'block' : 'none'; ?>;">
-        <?php include __DIR__ . '/tabs/map.php'; ?>
-    </div>
-
-    <div id="wifi" class="tab" style="display: <?php echo $active_tab === 'wifi' ? 'block' : 'none'; ?>;">
-        <?php
-        $wifi_tab = __DIR__ . '/tabs/wifi.php';
-        if (file_exists($wifi_tab)) {
-            include $wifi_tab;
-        } else {
-            echo "<p class='empty-note'>WiFi tab file is missing on the server. Upload tabs/wifi.php.</p>";
-        }
-        ?>
-    </div>
-
-    <div id="projects" class="tab" style="display: <?php echo $active_tab === 'projects' ? 'block' : 'none'; ?>;">
-        <?php include __DIR__ . '/tabs/projects.php'; ?>
+    <div id="admin" class="tab" style="display: <?php echo $active_tab === 'admin' ? 'block' : 'none'; ?>;">
+        <?php include __DIR__ . '/tabs/admin.php'; ?>
     </div>
 
 </div>

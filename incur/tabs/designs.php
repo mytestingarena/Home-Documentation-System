@@ -1,11 +1,12 @@
 <?php
 // tabs/designs.php — Designs tab content
 
-global $conn, $house_id;
+global $conn, $house_id, $hds_ui_settings;
 ?>
 
 <h2>Designs / Drawings / Plans</h2>
 
+<?php if (hds_ui_section_enabled('designs-upload', $hds_ui_settings)): ?>
 <div class="section-card">
     <h3>Upload Design Files</h3>
     <form method="post" enctype="multipart/form-data">
@@ -14,7 +15,9 @@ global $conn, $house_id;
         <input type="submit" name="upload_designs" value="Upload Files">
     </form>
 </div>
+<?php endif; ?>
 
+<?php if (hds_ui_section_enabled('designs-list', $hds_ui_settings)): ?>
 <div class="section-card">
     <h3>Uploaded Designs</h3>
 
@@ -124,3 +127,4 @@ global $conn, $house_id;
     }
     ?>
 </div>
+<?php endif; ?>

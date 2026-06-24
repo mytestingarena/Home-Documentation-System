@@ -1,7 +1,7 @@
 <?php
 // tabs/projects.php — Project List tab (quantity × price fixed, material delete, tax 5.5%)
 
-global $conn, $house_id;
+global $conn, $house_id, $hds_ui_settings;
 ?>
 
 <h2>Project List</h2>
@@ -15,7 +15,7 @@ global $conn, $house_id;
     </form>
 </div>
 
-<!-- Active Projects -->
+<?php if (hds_ui_section_enabled('projects-active', $hds_ui_settings)): ?>
 <div class="section-card">
     <h3>Active Projects</h3>
     <?php
@@ -94,8 +94,9 @@ global $conn, $house_id;
     }
     ?>
 </div>
+<?php endif; ?>
 
-<!-- Completed Projects Tracker -->
+<?php if (hds_ui_section_enabled('projects-completed', $hds_ui_settings)): ?>
 <div class="section-card">
     <h3>Completed Projects Tracker</h3>
     <?php
@@ -146,3 +147,4 @@ global $conn, $house_id;
     }
     ?>
 </div>
+<?php endif; ?>

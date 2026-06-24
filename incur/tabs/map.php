@@ -1,7 +1,7 @@
 <?php
 // tabs/map.php — Map Location with stored Google embed link
 
-global $conn, $house_id;
+global $conn, $house_id, $hds_ui_settings;
 ?>
 
 <h2>Map Location</h2>
@@ -17,6 +17,7 @@ $tax = htmlspecialchars($house_data['tax_number'] ?? '');
 $embed_src = htmlspecialchars($house_data['google_embed_src'] ?? '');
 ?>
 
+<?php if (hds_ui_section_enabled('map-property', $hds_ui_settings)): ?>
 <div class="section-card">
     <h3>Property Details</h3>
     <form method="post">
@@ -76,8 +77,9 @@ $embed_src = htmlspecialchars($house_data['google_embed_src'] ?? '');
         </p>
     </div>
 <?php endif; ?>
+<?php endif; ?>
 
-<!-- Property Taxes -->
+<?php if (hds_ui_section_enabled('map-taxes', $hds_ui_settings)): ?>
 <div class="section-card">
     <h3>Property Taxes</h3>
     <form method="post">
@@ -123,3 +125,4 @@ $embed_src = htmlspecialchars($house_data['google_embed_src'] ?? '');
         ?>
     </div>
 </div>
+<?php endif; ?>

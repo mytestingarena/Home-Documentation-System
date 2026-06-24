@@ -1,7 +1,7 @@
 <?php
 // tabs/permanent.php — Permanent Items tab (shows latest data)
 
-global $conn, $house_id;
+global $conn, $house_id, $hds_ui_settings;
 ?>
 
 <h2>Permanent Items</h2>
@@ -26,6 +26,9 @@ global $conn, $house_id;
     <?php
     $item_types = ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac'];
     foreach ($item_types as $type) {
+        if (!hds_ui_section_enabled('permanent-' . $type, $hds_ui_settings)) {
+            continue;
+        }
         $sql = "SELECT * FROM permanent_items WHERE house_id = $house_id AND item_type = '$type' ORDER BY id DESC LIMIT 1";
         $result = $conn->query($sql);
         $row = $result->fetch_assoc() ?? [];
@@ -54,4 +57,8 @@ global $conn, $house_id;
 
 <div class="permanent-separator" aria-hidden="true"></div>
 
-<?php include __DIR__ . '/breakers.php'; ?>
+<?php
+if (hds_ui_section_enabled('permanent-breakers', $hds_ui_settings)) {
+    include __DIR__ . '/breakers.php';
+}
+?>
