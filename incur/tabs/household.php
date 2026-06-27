@@ -27,20 +27,55 @@ $sql = "SELECT * FROM household_items WHERE house_id = $house_id ORDER BY id DES
 $items = $conn->query($sql);
 if ($items->num_rows > 0) {
     while ($item = $items->fetch_assoc()) {
+        $item_id = (int)$item['id'];
+        $item_type = htmlspecialchars($item['type'], ENT_QUOTES, 'UTF-8');
+        $brand = htmlspecialchars($item['brand'] ?? '', ENT_QUOTES, 'UTF-8');
+        $model = htmlspecialchars($item['model'] ?? '', ENT_QUOTES, 'UTF-8');
+        $sn = htmlspecialchars($item['sn'] ?? '', ENT_QUOTES, 'UTF-8');
+        $notes = htmlspecialchars($item['notes'] ?? '', ENT_QUOTES, 'UTF-8');
+        $has_notes = trim($item['notes'] ?? '') !== '';
+
         echo "<div class='section-card' style='margin-top:20px;'>";
-        echo "<h3>" . htmlspecialchars($item['type']) . " #" . $item['id'] . "</h3>";
+        echo "<h3>$item_type #$item_id</h3>";
+        echo "<div data-view-edit class='hds-ve-block'>";
+        echo "<div data-view-edit-view>";
+        echo "<div class='hds-ve-header'>";
+        echo "<div class='hds-ve-actions'>";
+        echo "<button type='button' class='small-btn' data-view-edit-open>Edit</button>";
+        echo "<form method='post' class='hds-ve-delete-form' onsubmit='return confirm(\"Delete this $item_type?\");'>";
+        echo "<input type='hidden' name='item_id' value='$item_id'>";
+        echo "<input type='submit' name='delete_household' value='Delete' class='small-btn delete-btn'>";
+        echo "</form>";
+        echo "</div>";
+        echo "</div>";
+        echo "<div class='hds-ve-body'>";
+        echo "<p class='hds-ve-field'><span class='hds-ve-label'>Brand:</span> " . hds_ve_display($item['brand'] ?? '') . "</p>";
+        echo "<p class='hds-ve-field'><span class='hds-ve-label'>Model:</span> " . hds_ve_display($item['model'] ?? '') . "</p>";
+        echo "<p class='hds-ve-field'><span class='hds-ve-label'>SN:</span> " . hds_ve_display($item['sn'] ?? '') . "</p>";
+        if ($has_notes) {
+            echo "<p class='hds-ve-field'><span class='hds-ve-label'>Notes:</span> " . hds_ve_display($item['notes'] ?? '') . "</p>";
+        }
+        echo "</div>";
+        echo "</div>";
+
+        echo "<div data-view-edit-form hidden>";
         echo "<form method='post'>";
-        echo "Brand: <input type='text' name='brand' value='" . htmlspecialchars($item['brand'] ?? '') . "'><br><br>";
-        echo "Model: <input type='text' name='model' value='" . htmlspecialchars($item['model'] ?? '') . "'><br><br>";
-        echo "SN: <input type='text' name='sn' value='" . htmlspecialchars($item['sn'] ?? '') . "'><br><br>";
-        echo "Notes: <textarea name='notes' rows='4' style='width:100%;'>" . htmlspecialchars($item['notes'] ?? '') . "</textarea><br><br>";
-        echo "<input type='hidden' name='item_id' value='" . $item['id'] . "'>";
-        echo "<input type='submit' name='update_household' value='Update'>";
+        echo "<input type='hidden' name='item_id' value='$item_id'>";
+        echo "<label>Brand:</label><br>";
+        echo "<input type='text' name='brand' value=\"$brand\"><br><br>";
+        echo "<label>Model:</label><br>";
+        echo "<input type='text' name='model' value=\"$model\"><br><br>";
+        echo "<label>SN:</label><br>";
+        echo "<input type='text' name='sn' value=\"$sn\"><br><br>";
+        echo "<label>Notes:</label><br>";
+        echo "<textarea name='notes' rows='4' style='width:100%;'>$notes</textarea><br><br>";
+        echo "<div class='hds-ve-edit-actions'>";
+        echo "<input type='submit' name='update_household' value='Save'>";
+        echo "<button type='button' class='small-btn' data-view-edit-cancel>Cancel</button>";
+        echo "</div>";
         echo "</form>";
-        echo "<form method='post' style='margin-top:10px;'>";
-        echo "<input type='hidden' name='item_id' value='" . $item['id'] . "'>";
-        echo "<input type='submit' name='delete_household' value='Delete' class='delete-btn' onclick='return confirm(\"Delete this " . htmlspecialchars($item['type']) . "?\");'>";
-        echo "</form>";
+        echo "</div>";
+        echo "</div>";
         echo "</div>";
     }
 } else {

@@ -58,32 +58,53 @@ if (session_status() === PHP_SESSION_ACTIVE) {
             $network_name = htmlspecialchars($network['network_name'], ENT_QUOTES, 'UTF-8');
             $wifi_password = htmlspecialchars($network['password'] ?? '', ENT_QUOTES, 'UTF-8');
             $wifi_notes = htmlspecialchars($network['notes'] ?? '', ENT_QUOTES, 'UTF-8');
+            $has_password = trim($network['password'] ?? '') !== '';
+            $has_notes = trim($network['notes'] ?? '') !== '';
+            $password_display = $has_password ? '••••••••' : '—';
 
             echo "<div class='section-card wifi-card'>";
             echo "<h3><i class='fas fa-wifi' aria-hidden='true'></i> $network_name</h3>";
 
+            echo "<div data-view-edit class='hds-ve-block'>";
+            echo "<div data-view-edit-view>";
+            echo "<div class='hds-ve-header'>";
+            echo "<div class='hds-ve-actions'>";
+            echo "<button type='button' class='small-btn' data-view-edit-open>Edit</button>";
+            echo "<form method='post' class='hds-ve-delete-form' onsubmit='return confirm(\"Delete this WiFi network?\");'>";
+            echo "<input type='hidden' name='wifi_id' value='$network_id'>";
+            echo "<input type='submit' name='delete_wifi' value='Delete' class='small-btn delete-btn'>";
+            echo "</form>";
+            echo "</div>";
+            echo "</div>";
+            echo "<div class='hds-ve-body'>";
+            echo "<p class='hds-ve-field'><span class='hds-ve-label'>Network Name:</span> $network_name</p>";
+            echo "<p class='hds-ve-field'><span class='hds-ve-label'>Password:</span> $password_display</p>";
+            if ($has_notes) {
+                echo "<p class='hds-ve-field'><span class='hds-ve-label'>Notes:</span> " . hds_ve_display($network['notes'] ?? '') . "</p>";
+            }
+            echo "</div>";
+            echo "</div>";
+
+            echo "<div data-view-edit-form hidden>";
             echo "<form method='post' class='wifi-form'>";
             echo "<input type='hidden' name='wifi_id' value='$network_id'>";
-
             echo "<label>Network Name (SSID):</label><br>";
             echo "<input type='text' name='network_name' value=\"$network_name\" required style='width:100%;'><br><br>";
-
             echo "<label>WiFi Password:</label><br>";
             echo "<div class='wifi-password-row'>";
             echo "<input type='password' class='wifi-password-field' name='wifi_password' value=\"$wifi_password\" style='width:100%;'>";
             echo "<button type='button' class='wifi-toggle-btn' onclick='toggleWifiPassword(this)'>Show</button>";
             echo "</div><br>";
-
             echo "<label>Notes:</label><br>";
             echo "<textarea name='wifi_notes' rows='3' style='width:100%;'>$wifi_notes</textarea><br><br>";
-
+            echo "<div class='hds-ve-edit-actions'>";
             echo "<input type='submit' name='update_wifi' value='Save Network'>";
+            echo "<button type='button' class='small-btn' data-view-edit-cancel>Cancel</button>";
+            echo "</div>";
             echo "</form>";
+            echo "</div>";
+            echo "</div>";
 
-            echo "<form method='post' class='wifi-delete-form' onsubmit='return confirm(\"Delete this WiFi network?\");'>";
-            echo "<input type='hidden' name='wifi_id' value='$network_id'>";
-            echo "<input type='submit' name='delete_wifi' value='Delete' class='delete-btn'>";
-            echo "</form>";
             echo "</div>";
         }
         echo "</div>";

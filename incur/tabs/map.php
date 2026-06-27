@@ -20,26 +20,55 @@ $embed_src = htmlspecialchars($house_data['google_embed_src'] ?? '');
 <?php if (hds_ui_section_enabled('map-property', $hds_ui_settings)): ?>
 <div class="section-card">
     <h3>Property Details</h3>
-    <form method="post">
-        <label>Address:</label><br>
-        <textarea name="address" rows="3" style="width:100%;"><?php echo $address; ?></textarea><br><br>
+    <div data-view-edit class="hds-ve-block">
+        <div data-view-edit-view>
+            <div class="hds-ve-header">
+                <div class="hds-ve-actions">
+                    <button type="button" class="small-btn" data-view-edit-open>Edit</button>
+                </div>
+            </div>
+            <div class="hds-ve-body">
+                <p class="hds-ve-field"><span class="hds-ve-label">Address:</span> <?php echo hds_ve_display($house_data['address'] ?? ''); ?></p>
+                <p class="hds-ve-field"><span class="hds-ve-label">GPS Coordinates:</span>
+                    <?php
+                    if ($lat != 0 || $lng != 0) {
+                        echo hds_ve_display($lat . ', ' . $lng);
+                    } else {
+                        echo '—';
+                    }
+                    ?>
+                </p>
+                <p class="hds-ve-field"><span class="hds-ve-label">Parcel/Tax ID:</span> <?php echo hds_ve_display($house_data['tax_number'] ?? ''); ?></p>
+                <p class="hds-ve-field"><span class="hds-ve-label">Map Zoom Level:</span> <?php echo hds_ve_display((string)$zoom); ?></p>
+                <p class="hds-ve-field"><span class="hds-ve-label">Google Maps Embed Link:</span> <?php echo hds_ve_display($house_data['google_embed_src'] ?? ''); ?></p>
+            </div>
+        </div>
+        <div data-view-edit-form hidden>
+            <form method="post">
+                <label>Address:</label><br>
+                <textarea name="address" rows="3" style="width:100%;"><?php echo $address; ?></textarea><br><br>
 
-        <label>GPS Coordinates (optional):</label><br>
-        <input type="text" name="latitude" placeholder="Latitude (e.g. 42.322785)" value="<?php echo $lat ?: ''; ?>" style="width:48%; margin-right:2%;">
-        <input type="text" name="longitude" placeholder="Longitude (e.g. -88.282123)" value="<?php echo $lng ?: ''; ?>" style="width:48%;"><br><br>
+                <label>GPS Coordinates (optional):</label><br>
+                <input type="text" name="latitude" placeholder="Latitude (e.g. 42.322785)" value="<?php echo $lat ?: ''; ?>" style="width:48%; margin-right:2%;">
+                <input type="text" name="longitude" placeholder="Longitude (e.g. -88.282123)" value="<?php echo $lng ?: ''; ?>" style="width:48%;"><br><br>
 
-        <label>Parcel/Tax ID:</label><br>
-        <input type="text" name="tax_number" value="<?php echo $tax; ?>" style="width:100%;"><br><br>
+                <label>Parcel/Tax ID:</label><br>
+                <input type="text" name="tax_number" value="<?php echo $tax; ?>" style="width:100%;"><br><br>
 
-        <label>Map Zoom Level (recommended 16–20, optional):</label><br>
-        <input type="number" name="map_zoom" min="1" max="20" value="<?php echo $zoom; ?>" style="width:100px;"><br><br>
+                <label>Map Zoom Level (recommended 16–20, optional):</label><br>
+                <input type="number" name="map_zoom" min="1" max="20" value="<?php echo $zoom; ?>" style="width:100px;"><br><br>
 
-        <label>Google Maps Embed Link (recommended – paste the src URL from embed code):</label><br>
-        <input type="text" name="google_embed_src" value="<?php echo $embed_src; ?>" placeholder="https://www.google.com/maps/embed?pb=..." style="width:100%;"><br>
-        <small>How to get it: Go to Google Maps → search your address → Share → Embed a map → Copy the src URL only (everything inside quotes after src=)</small><br><br>
+                <label>Google Maps Embed Link (recommended – paste the src URL from embed code):</label><br>
+                <input type="text" name="google_embed_src" value="<?php echo $embed_src; ?>" placeholder="https://www.google.com/maps/embed?pb=..." style="width:100%;"><br>
+                <small>How to get it: Go to Google Maps → search your address → Share → Embed a map → Copy the src URL only (everything inside quotes after src=)</small><br><br>
 
-        <input type="submit" name="update_map" value="Save Location Info">
-    </form>
+                <div class="hds-ve-edit-actions">
+                    <input type="submit" name="update_map" value="Save Location Info">
+                    <button type="button" class="small-btn" data-view-edit-cancel>Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <?php if (!empty($embed_src)): ?>

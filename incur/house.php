@@ -12,6 +12,7 @@ if (!defined('ADMIN_TAB_PASSWORD')) {
 }
 
 require_once __DIR__ . '/includes/ui-settings.php';
+require_once __DIR__ . '/includes/view-edit.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     @session_start();
@@ -122,12 +123,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
     }
 
-    // PERMANENT ITEMS UPDATE
-    if (isset($_POST['update_permanent'])) {
+    // PERMANENT ITEMS UPDATE (single item)
+    if (isset($_POST['update_permanent_item'])) {
         $item_types = ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac'];
-        $success = true;
+        $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
 
-        foreach ($item_types as $type) {
+        if (in_array($type, $item_types, true)) {
             $brand       = mysqli_real_escape_string($conn, $_POST["{$type}_brand"] ?? '');
             $model       = mysqli_real_escape_string($conn, $_POST["{$type}_model"] ?? '');
             $sn          = mysqli_real_escape_string($conn, $_POST["{$type}_sn"] ?? '');
@@ -141,11 +142,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     ON DUPLICATE KEY UPDATE 
                     brand = VALUES(brand), model = VALUES(model), sn = VALUES(sn), 
                     efficiency = VALUES(efficiency), kwh = VALUES(kwh), capacity = VALUES(capacity)";
-            
+
             if (!$conn->query($sql)) {
-                $success = false;
                 error_log("Permanent Items update failed for $type: " . $conn->error);
+                header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=' . urlencode($type) . '&saved=0');
+                exit;
             }
+
+            header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=' . urlencode($type) . '&saved=1');
+            exit;
         }
 
         house_redirect($house_id, 'permanent');
@@ -608,8 +613,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // MEDIA/PHOTOS UPLOAD
-    if (isset($_POST['upload_photo']) && !empty($_FILES['photos']['name'][0])) {
+    if (isset($_POST['upload_photo'])) {
         include __DIR__ . '/tabs/media-upload.php';
+        $open_media = preg_replace('/[^a-z0-9\-]/', '', $_POST['open_media_section'] ?? '');
+        if ($open_media === '' && ($_POST['section'] ?? '') === 'Walkthrough') {
+            $open_media = 'walkthrough';
+        }
+        house_redirect($house_id, 'media', $open_media, 'open_media');
+    }
+
+    // MEDIA/PHOTOS SYNC — register on-disk files missing from database
+    if (isset($_POST['sync_media_files'])) {
+        include __DIR__ . '/tabs/media-sync.php';
         house_redirect($house_id, 'media');
     }
 
@@ -641,6 +656,58 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         house_redirect($house_id, 'media');
+    }
+
+    // MEDIA/PHOTOS RENAME
+    if (isset($_POST['rename_photo'])) {
+        $photo_id = intval($_POST['photo_id'] ?? 0);
+        $house_id_post = intval($_POST['house_id'] ?? 0);
+        $new_basename_raw = trim($_POST['photo_basename'] ?? '');
+
+        if ($photo_id > 0 && $house_id_post === $house_id && $new_basename_raw !== '') {
+            $stmt = $conn->prepare("SELECT filename FROM photos WHERE id = ? AND house_id = ?");
+            $stmt->bind_param("ii", $photo_id, $house_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            if ($row = $result->fetch_assoc()) {
+                $old_filename = $row['filename'];
+                $old_ext = strtolower(pathinfo($old_filename, PATHINFO_EXTENSION));
+                $basename = basename($new_basename_raw);
+                $basename = preg_replace('/[^a-zA-Z0-9._\- ()]/', '_', $basename);
+                $basename = trim($basename, '. ');
+                if (str_contains($basename, '.')) {
+                    $basename = pathinfo($basename, PATHINFO_FILENAME);
+                    $basename = trim($basename, '. ');
+                }
+                $new_name = ($old_ext !== '') ? $basename . '.' . $old_ext : $basename;
+
+                if ($basename !== '') {
+                    $old_path = "uploads/photos/" . $old_filename;
+                    $new_path = "uploads/photos/" . $new_name;
+
+                    if ($new_name !== $old_filename) {
+                        if (file_exists($new_path)) {
+                            $_SESSION['media_error'] = 'A file with that name already exists.';
+                        } elseif (file_exists($old_path) && rename($old_path, $new_path)) {
+                            $safe_name = mysqli_real_escape_string($conn, $new_name);
+                            $conn->query("UPDATE photos SET filename='$safe_name' WHERE id=$photo_id AND house_id=$house_id");
+                        } elseif (file_exists($old_path)) {
+                            $_SESSION['media_error'] = 'Could not rename the file on disk.';
+                        } else {
+                            $safe_name = mysqli_real_escape_string($conn, $new_name);
+                            $conn->query("UPDATE photos SET filename='$safe_name' WHERE id=$photo_id AND house_id=$house_id");
+                        }
+                    }
+                } else {
+                    $_SESSION['media_error'] = 'Please enter a valid file name.';
+                }
+            }
+            $stmt->close();
+        }
+
+        $open_media = preg_replace('/[^a-z0-9\-]/', '', $_POST['open_media_section'] ?? '');
+        house_redirect($house_id, 'media', $open_media, 'open_media');
     }
 
     // USER MANUALS UPLOAD
@@ -883,8 +950,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260624b">
-    <script src="scripts.js?v=20260624b"></script>
+    <link rel="stylesheet" href="styles.css?v=20260627f">
+    <script src="scripts.js?v=20260627f"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>

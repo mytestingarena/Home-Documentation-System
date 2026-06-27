@@ -28,13 +28,38 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
         <div class="collapsible-body">
         <?php
         $meter = $conn->query("SELECT * FROM electric_meters WHERE house_id = $house_id")->fetch_assoc() ?? [];
+        $meter_number = htmlspecialchars($meter['meter_number'] ?? '', ENT_QUOTES, 'UTF-8');
+        $meter_company = htmlspecialchars($meter['company'] ?? '', ENT_QUOTES, 'UTF-8');
+        $meter_phone = htmlspecialchars($meter['phone'] ?? '', ENT_QUOTES, 'UTF-8');
         ?>
-        <form method="post">
-            Meter Number: <input type="text" name="meter_number" value="<?php echo htmlspecialchars($meter['meter_number'] ?? ''); ?>"><br><br>
-            Company: <input type="text" name="company" value="<?php echo htmlspecialchars($meter['company'] ?? ''); ?>"><br><br>
-            Phone: <input type="text" name="phone" value="<?php echo htmlspecialchars($meter['phone'] ?? ''); ?>"><br><br>
-            <input type="submit" name="save_meter_account" value="Save Account Info">
-        </form>
+        <div data-view-edit class="hds-ve-block">
+            <div data-view-edit-view>
+                <div class="hds-ve-header">
+                    <div class="hds-ve-actions">
+                        <button type="button" class="small-btn" data-view-edit-open>Edit</button>
+                    </div>
+                </div>
+                <div class="hds-ve-body">
+                    <p class="hds-ve-field"><span class="hds-ve-label">Meter Number:</span> <?php echo hds_ve_display($meter['meter_number'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Company:</span> <?php echo hds_ve_display($meter['company'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Phone:</span> <?php echo hds_ve_display($meter['phone'] ?? ''); ?></p>
+                </div>
+            </div>
+            <div data-view-edit-form hidden>
+                <form method="post">
+                    <label>Meter Number:</label><br>
+                    <input type="text" name="meter_number" value="<?php echo $meter_number; ?>"><br><br>
+                    <label>Company:</label><br>
+                    <input type="text" name="company" value="<?php echo $meter_company; ?>"><br><br>
+                    <label>Phone:</label><br>
+                    <input type="text" name="phone" value="<?php echo $meter_phone; ?>"><br><br>
+                    <div class="hds-ve-edit-actions">
+                        <input type="submit" name="save_meter_account" value="Save Account Info">
+                        <button type="button" class="small-btn" data-view-edit-cancel>Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <form method="post" class="utility-subform">
             <strong>Add Current/Next Bill:</strong><br><br>
@@ -85,20 +110,53 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
         <?php
         $generator = $conn->query("SELECT * FROM generators WHERE house_id = $house_id LIMIT 1")->fetch_assoc() ?? [];
         $fuel_type = ($generator['fuel_type'] ?? 'LP') === 'NG' ? 'NG' : 'LP';
+        $fuel_label = $fuel_type === 'NG' ? 'NG (Natural Gas)' : 'LP (Propane)';
+        $gen_brand = htmlspecialchars($generator['brand'] ?? '', ENT_QUOTES, 'UTF-8');
+        $gen_model = htmlspecialchars($generator['model'] ?? '', ENT_QUOTES, 'UTF-8');
+        $gen_sn = htmlspecialchars($generator['sn'] ?? '', ENT_QUOTES, 'UTF-8');
+        $gen_eff = htmlspecialchars($generator['efficiency'] ?? '', ENT_QUOTES, 'UTF-8');
+        $gen_kwh = htmlspecialchars($generator['kwh'] ?? '0.00', ENT_QUOTES, 'UTF-8');
         ?>
-        <form method="post">
-            Brand: <input type="text" name="generator_brand" value="<?php echo htmlspecialchars($generator['brand'] ?? ''); ?>"><br><br>
-            Model: <input type="text" name="generator_model" value="<?php echo htmlspecialchars($generator['model'] ?? ''); ?>"><br><br>
-            Serial Number: <input type="text" name="generator_sn" value="<?php echo htmlspecialchars($generator['sn'] ?? ''); ?>"><br><br>
-            Efficiency / Rating: <input type="text" name="generator_efficiency" value="<?php echo htmlspecialchars($generator['efficiency'] ?? ''); ?>"><br><br>
-            Power (kW): <input type="number" step="0.01" name="generator_kwh" value="<?php echo htmlspecialchars($generator['kwh'] ?? '0.00'); ?>"><br><br>
-            Fuel Type:
-            <select name="generator_fuel_type">
-                <option value="LP" <?php echo $fuel_type === 'LP' ? 'selected' : ''; ?>>LP (Propane)</option>
-                <option value="NG" <?php echo $fuel_type === 'NG' ? 'selected' : ''; ?>>NG (Natural Gas)</option>
-            </select><br><br>
-            <input type="submit" name="save_generator" value="Save Generator Info">
-        </form>
+        <div data-view-edit class="hds-ve-block">
+            <div data-view-edit-view>
+                <div class="hds-ve-header">
+                    <div class="hds-ve-actions">
+                        <button type="button" class="small-btn" data-view-edit-open>Edit</button>
+                    </div>
+                </div>
+                <div class="hds-ve-body">
+                    <p class="hds-ve-field"><span class="hds-ve-label">Brand:</span> <?php echo hds_ve_display($generator['brand'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Model:</span> <?php echo hds_ve_display($generator['model'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Serial Number:</span> <?php echo hds_ve_display($generator['sn'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Efficiency / Rating:</span> <?php echo hds_ve_display($generator['efficiency'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Power (kW):</span> <?php echo hds_ve_display($generator['kwh'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Fuel Type:</span> <?php echo htmlspecialchars($fuel_label, ENT_QUOTES, 'UTF-8'); ?></p>
+                </div>
+            </div>
+            <div data-view-edit-form hidden>
+                <form method="post">
+                    <label>Brand:</label><br>
+                    <input type="text" name="generator_brand" value="<?php echo $gen_brand; ?>"><br><br>
+                    <label>Model:</label><br>
+                    <input type="text" name="generator_model" value="<?php echo $gen_model; ?>"><br><br>
+                    <label>Serial Number:</label><br>
+                    <input type="text" name="generator_sn" value="<?php echo $gen_sn; ?>"><br><br>
+                    <label>Efficiency / Rating:</label><br>
+                    <input type="text" name="generator_efficiency" value="<?php echo $gen_eff; ?>"><br><br>
+                    <label>Power (kW):</label><br>
+                    <input type="number" step="0.01" name="generator_kwh" value="<?php echo $gen_kwh; ?>"><br><br>
+                    <label>Fuel Type:</label><br>
+                    <select name="generator_fuel_type">
+                        <option value="LP" <?php echo $fuel_type === 'LP' ? 'selected' : ''; ?>>LP (Propane)</option>
+                        <option value="NG" <?php echo $fuel_type === 'NG' ? 'selected' : ''; ?>>NG (Natural Gas)</option>
+                    </select><br><br>
+                    <div class="hds-ve-edit-actions">
+                        <input type="submit" name="save_generator" value="Save Generator Info">
+                        <button type="button" class="small-btn" data-view-edit-cancel>Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
         </div>
     </details>
     <?php endif; ?>
@@ -113,19 +171,46 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
         <div class="collapsible-body">
         <?php
         $water = $conn->query("SELECT * FROM water_utilities WHERE house_id = $house_id LIMIT 1")->fetch_assoc() ?? [];
+        $water_account = htmlspecialchars($water['account_number'] ?? '', ENT_QUOTES, 'UTF-8');
+        $water_meter = htmlspecialchars($water['meter_number'] ?? '', ENT_QUOTES, 'UTF-8');
+        $water_phone = htmlspecialchars($water['phone'] ?? '', ENT_QUOTES, 'UTF-8');
+        $water_freq = $water['billing_frequency'] ?? 'Monthly';
         ?>
-        <form method="post">
-            Account Number: <input type="text" name="account_number" value="<?php echo htmlspecialchars($water['account_number'] ?? ''); ?>"><br><br>
-            Meter Number: <input type="text" name="meter_number" value="<?php echo htmlspecialchars($water['meter_number'] ?? ''); ?>"><br><br>
-            Billing Frequency:
-            <select name="billing_frequency">
-                <option value="Monthly"   <?php echo ($water['billing_frequency'] ?? 'Monthly') === 'Monthly'   ? 'selected' : ''; ?>>Monthly</option>
-                <option value="Quarterly" <?php echo ($water['billing_frequency'] ?? 'Monthly') === 'Quarterly' ? 'selected' : ''; ?>>Quarterly</option>
-                <option value="Annual"    <?php echo ($water['billing_frequency'] ?? 'Monthly') === 'Annual'    ? 'selected' : ''; ?>>Annual</option>
-            </select><br><br>
-            Phone: <input type="text" name="phone" value="<?php echo htmlspecialchars($water['phone'] ?? ''); ?>"><br><br>
-            <input type="submit" name="save_water_account" value="Save Account Info">
-        </form>
+        <div data-view-edit class="hds-ve-block">
+            <div data-view-edit-view>
+                <div class="hds-ve-header">
+                    <div class="hds-ve-actions">
+                        <button type="button" class="small-btn" data-view-edit-open>Edit</button>
+                    </div>
+                </div>
+                <div class="hds-ve-body">
+                    <p class="hds-ve-field"><span class="hds-ve-label">Account Number:</span> <?php echo hds_ve_display($water['account_number'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Meter Number:</span> <?php echo hds_ve_display($water['meter_number'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Billing Frequency:</span> <?php echo hds_ve_display($water_freq); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Phone:</span> <?php echo hds_ve_display($water['phone'] ?? ''); ?></p>
+                </div>
+            </div>
+            <div data-view-edit-form hidden>
+                <form method="post">
+                    <label>Account Number:</label><br>
+                    <input type="text" name="account_number" value="<?php echo $water_account; ?>"><br><br>
+                    <label>Meter Number:</label><br>
+                    <input type="text" name="meter_number" value="<?php echo $water_meter; ?>"><br><br>
+                    <label>Billing Frequency:</label><br>
+                    <select name="billing_frequency">
+                        <option value="Monthly"   <?php echo $water_freq === 'Monthly'   ? 'selected' : ''; ?>>Monthly</option>
+                        <option value="Quarterly" <?php echo $water_freq === 'Quarterly' ? 'selected' : ''; ?>>Quarterly</option>
+                        <option value="Annual"    <?php echo $water_freq === 'Annual'    ? 'selected' : ''; ?>>Annual</option>
+                    </select><br><br>
+                    <label>Phone:</label><br>
+                    <input type="text" name="phone" value="<?php echo $water_phone; ?>"><br><br>
+                    <div class="hds-ve-edit-actions">
+                        <input type="submit" name="save_water_account" value="Save Account Info">
+                        <button type="button" class="small-btn" data-view-edit-cancel>Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <form method="post" class="utility-subform">
             <strong>Add Current/Next Bill:</strong><br><br>
@@ -211,14 +296,42 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
         <div class="collapsible-body">
         <?php
         $propane = $conn->query("SELECT * FROM propane_utilities WHERE house_id = $house_id LIMIT 1")->fetch_assoc() ?? [];
+        $prop_gallons = htmlspecialchars($propane['gallons'] ?? '', ENT_QUOTES, 'UTF-8');
+        $prop_provider = htmlspecialchars($propane['provider'] ?? '', ENT_QUOTES, 'UTF-8');
+        $prop_tank_sn = htmlspecialchars($propane['tank_sn'] ?? '', ENT_QUOTES, 'UTF-8');
+        $prop_phone = htmlspecialchars($propane['phone'] ?? '', ENT_QUOTES, 'UTF-8');
         ?>
-        <form method="post">
-            Gallons: <input type="number" step="0.1" name="gallons" value="<?php echo htmlspecialchars($propane['gallons'] ?? ''); ?>"><br><br>
-            Provider: <input type="text" name="provider" value="<?php echo htmlspecialchars($propane['provider'] ?? ''); ?>"><br><br>
-            Tank SN: <input type="text" name="tank_sn" value="<?php echo htmlspecialchars($propane['tank_sn'] ?? ''); ?>"><br><br>
-            Phone: <input type="text" name="phone" value="<?php echo htmlspecialchars($propane['phone'] ?? ''); ?>"><br><br>
-            <input type="submit" name="save_propane_account" value="Save Propane Info">
-        </form>
+        <div data-view-edit class="hds-ve-block">
+            <div data-view-edit-view>
+                <div class="hds-ve-header">
+                    <div class="hds-ve-actions">
+                        <button type="button" class="small-btn" data-view-edit-open>Edit</button>
+                    </div>
+                </div>
+                <div class="hds-ve-body">
+                    <p class="hds-ve-field"><span class="hds-ve-label">Gallons:</span> <?php echo hds_ve_display($propane['gallons'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Provider:</span> <?php echo hds_ve_display($propane['provider'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Tank SN:</span> <?php echo hds_ve_display($propane['tank_sn'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Phone:</span> <?php echo hds_ve_display($propane['phone'] ?? ''); ?></p>
+                </div>
+            </div>
+            <div data-view-edit-form hidden>
+                <form method="post">
+                    <label>Gallons:</label><br>
+                    <input type="number" step="0.1" name="gallons" value="<?php echo $prop_gallons; ?>"><br><br>
+                    <label>Provider:</label><br>
+                    <input type="text" name="provider" value="<?php echo $prop_provider; ?>"><br><br>
+                    <label>Tank SN:</label><br>
+                    <input type="text" name="tank_sn" value="<?php echo $prop_tank_sn; ?>"><br><br>
+                    <label>Phone:</label><br>
+                    <input type="text" name="phone" value="<?php echo $prop_phone; ?>"><br><br>
+                    <div class="hds-ve-edit-actions">
+                        <input type="submit" name="save_propane_account" value="Save Propane Info">
+                        <button type="button" class="small-btn" data-view-edit-cancel>Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <form method="post" class="utility-subform">
             <strong>Add Current/Next Bill:</strong><br><br>
