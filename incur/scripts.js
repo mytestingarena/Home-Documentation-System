@@ -87,7 +87,9 @@ document.addEventListener("DOMContentLoaded", function() {
   scrollToOpenSection();
   initMediaLightbox();
   initMediaRenameModal();
+  initOutdoorRenameModal();
   initViewEdit();
+  initPermanentLogContractorFields();
 });
 
 window.addEventListener("resize", positionMobileMenu);
@@ -175,7 +177,12 @@ function initMediaLightbox() {
   }
 
   function openLightbox(trigger) {
-    currentGallery = allLightboxItems();
+    var gallery = trigger.closest("[data-lightbox-gallery]");
+    if (gallery) {
+      currentGallery = Array.prototype.slice.call(gallery.querySelectorAll(".media-lightbox-trigger"));
+    } else {
+      currentGallery = allLightboxItems();
+    }
     currentIndex = currentGallery.indexOf(trigger);
     if (currentIndex < 0) currentIndex = 0;
     renderSlide();
@@ -317,6 +324,75 @@ function initMediaRenameModal() {
   });
 }
 
+function initOutdoorRenameModal() {
+  var modal = document.getElementById("outdoorRenameModal");
+  if (!modal) return;
+
+  if (modal.parentElement && modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  var currentEl = document.getElementById("outdoorRenameCurrent");
+  var imageIdEl = document.getElementById("outdoorRenameImageId");
+  var outdoorIdEl = document.getElementById("outdoorRenameOutdoorId");
+  var newNameEl = document.getElementById("outdoorRenameNew");
+  var extEl = document.getElementById("outdoorRenameExt");
+
+  function splitFilename(filename) {
+    var lastDot = filename.lastIndexOf(".");
+    if (lastDot <= 0) {
+      return { base: filename, ext: "" };
+    }
+    return {
+      base: filename.substring(0, lastDot),
+      ext: filename.substring(lastDot)
+    };
+  }
+
+  function openRenameModal(button) {
+    var filename = button.getAttribute("data-filename") || "";
+    var imageId = button.getAttribute("data-outdoor-image-id") || "";
+    var outdoorId = button.getAttribute("data-outdoor-id") || "";
+    var parts = splitFilename(filename);
+    if (currentEl) currentEl.textContent = filename;
+    if (imageIdEl) imageIdEl.value = imageId;
+    if (outdoorIdEl) outdoorIdEl.value = outdoorId;
+    if (extEl) extEl.textContent = parts.ext;
+    if (newNameEl) {
+      newNameEl.value = parts.base;
+      setTimeout(function() {
+        newNameEl.focus();
+        newNameEl.select();
+      }, 0);
+    }
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("media-rename-active");
+  }
+
+  function closeRenameModal() {
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("media-rename-active");
+  }
+
+  document.addEventListener("click", function(evt) {
+    if (evt.target.closest("[data-outdoor-rename-close]")) {
+      closeRenameModal();
+      return;
+    }
+    var openBtn = evt.target.closest(".outdoor-rename-open");
+    if (openBtn) {
+      openRenameModal(openBtn);
+    }
+  });
+
+  document.addEventListener("keydown", function(evt) {
+    if (modal.hidden) return;
+    if (evt.key === "Escape") closeRenameModal();
+  });
+}
+
 function initViewEdit() {
   function showView(block) {
     var view = block.querySelector("[data-view-edit-view]");
@@ -363,6 +439,47 @@ function initViewEdit() {
     if (cancelBtn) {
       var cancelBlock = cancelBtn.closest("[data-view-edit]");
       if (cancelBlock) showView(cancelBlock);
+    }
+  });
+}
+
+function initPermanentLogContractorFields() {
+  function updateForm(form) {
+    var contractorFields = form.querySelector(".perm-log-contractor-fields");
+    if (!contractorFields) return;
+
+    var contractorRadio = form.querySelector('input[name="perm_log_completed_by"][value="contractor"]');
+    var show = contractorRadio && contractorRadio.checked;
+    contractorFields.hidden = !show;
+
+    var inputs = contractorFields.querySelectorAll("input, select, textarea");
+    for (var i = 0; i < inputs.length; i++) {
+      inputs[i].disabled = !show;
+    }
+  }
+
+  var forms = document.querySelectorAll(".perm-log-form");
+  for (var f = 0; f < forms.length; f++) {
+    (function(form) {
+      updateForm(form);
+      form.addEventListener("change", function(evt) {
+        if (evt.target.name === "perm_log_completed_by") {
+          updateForm(form);
+        }
+      });
+    })(forms[f]);
+  }
+
+  document.addEventListener("click", function(evt) {
+    var openBtn = evt.target.closest("[data-view-edit-open]");
+    if (!openBtn) return;
+    var block = openBtn.closest("[data-view-edit]");
+    if (!block) return;
+    var form = block.querySelector(".perm-log-form");
+    if (form) {
+      setTimeout(function() {
+        updateForm(form);
+      }, 0);
     }
   });
 }

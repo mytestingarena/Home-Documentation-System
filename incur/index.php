@@ -82,6 +82,16 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
         $conn->query("DELETE FROM battery_strings WHERE house_id = $house_id");
         $conn->query("DELETE FROM breakers WHERE panel_id IN (SELECT id FROM electric_panels WHERE house_id = $house_id)");
         $conn->query("DELETE FROM electric_panels WHERE house_id = $house_id");
+        $outdoor_imgs = @$conn->query("SELECT i.filename FROM outdoor_work_images i INNER JOIN outdoor_work_items w ON i.outdoor_work_id = w.id WHERE w.house_id = $house_id");
+        if ($outdoor_imgs) {
+            while ($img = $outdoor_imgs->fetch_assoc()) {
+                $path = 'uploads/outdoor-work/' . $img['filename'];
+                if (file_exists($path)) {
+                    unlink($path);
+                }
+            }
+        }
+        @$conn->query("DELETE FROM outdoor_work_items WHERE house_id = $house_id");
 
         $sql = "DELETE FROM houses WHERE id = $house_id";
         if ($conn->query($sql)) {

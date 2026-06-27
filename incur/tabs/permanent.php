@@ -2,6 +2,8 @@
 // tabs/permanent.php — Permanent Items tab (shows latest data)
 
 global $conn, $house_id, $hds_ui_settings;
+
+require_once __DIR__ . '/../includes/permanent-maintenance-log.php';
 ?>
 
 <h2>Permanent Items</h2>
@@ -15,6 +17,17 @@ global $conn, $house_id, $hds_ui_settings;
         <?php endif; ?>
     </div>
 <?php endif; ?>
+
+<?php
+if (!empty($_SESSION['outdoor_photo_success'])) {
+    echo "<p class='media-success'>" . htmlspecialchars($_SESSION['outdoor_photo_success'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['outdoor_photo_success']);
+}
+if (!empty($_SESSION['outdoor_photo_error'])) {
+    echo "<p class='media-error'>" . htmlspecialchars($_SESSION['outdoor_photo_error'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['outdoor_photo_error']);
+}
+?>
 
 <div class="collapsible-list-toolbar">
     <button type="button" class="small-btn" onclick="collapsibleExpandAll('.permanent-items-list .collapsible-section', true)">Expand all</button>
@@ -95,6 +108,8 @@ foreach ($item_types as $type) {
     echo "</div>";
     echo "</div>";
 
+    hds_render_permanent_maintenance_log($conn, $house_id, $type);
+
     echo "</div>";
     echo "</details>";
 }
@@ -104,6 +119,10 @@ foreach ($item_types as $type) {
 <div class="permanent-separator" aria-hidden="true"></div>
 
 <?php
+if (hds_ui_section_enabled('permanent-outdoor_work', $hds_ui_settings)) {
+    include __DIR__ . '/outdoor-work.php';
+}
+
 if (hds_ui_section_enabled('permanent-breakers', $hds_ui_settings)) {
     include __DIR__ . '/breakers.php';
 }

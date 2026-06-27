@@ -24,6 +24,7 @@ function hds_ui_registry(): array {
                 'permanent-washer'       => 'Washer',
                 'permanent-dryer'        => 'Dryer',
                 'permanent-ac'           => 'Air Conditioner',
+                'permanent-outdoor_work' => 'Outdoor Work',
                 'permanent-breakers'     => 'Breaker Panels',
             ],
             'utility' => [

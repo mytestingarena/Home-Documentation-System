@@ -9,8 +9,8 @@ $breakers_open = $open_panel_id > 0 ? ' open' : '';
 function render_breaker_table_rows($conn, int $panel_id, int $panel_size, bool $readonly = false): void {
     $max_rows = (int)ceil($panel_size / 2);
     for ($row = 1; $row <= $max_rows; $row++) {
-        $top_left_num  = $panel_size - ($row - 1) * 2;
-        $top_right_num = $top_left_num - 1;
+        $top_left_num  = ($row - 1) * 2 + 1;
+        $top_right_num = ($row - 1) * 2 + 2;
 
         $left = $conn->query("SELECT room, amp FROM breakers WHERE panel_id = $panel_id AND column_num = 1 AND row_num = $row")->fetch_assoc();
         $left_room_raw = $left ? ($left['room'] ?? '') : '';
@@ -59,6 +59,7 @@ function render_breaker_table_rows($conn, int $panel_id, int $panel_size, bool $
                 <option value="12">12 Breaker Panel</option>
                 <option value="24">24 Breaker Panel</option>
                 <option value="28">28 Breaker Panel</option>
+                <option value="30">30 Breaker Panel</option>
             </select>
             <input type="text" name="new_panel_name" placeholder="Panel Name (e.g. Main, Garage Sub)" required>
             <input type="submit" name="add_breaker_panel" value="Add Panel">
@@ -130,5 +131,7 @@ function render_breaker_table_rows($conn, int $panel_id, int $panel_size, bool $
         }
         ?>
         </div>
+
+        <?php hds_render_permanent_maintenance_log($conn, $house_id, 'breakers'); ?>
     </div>
 </details>

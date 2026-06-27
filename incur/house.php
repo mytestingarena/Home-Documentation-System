@@ -13,6 +13,8 @@ if (!defined('ADMIN_TAB_PASSWORD')) {
 
 require_once __DIR__ . '/includes/ui-settings.php';
 require_once __DIR__ . '/includes/view-edit.php';
+require_once __DIR__ . '/includes/permanent-maintenance-log.php';
+require_once __DIR__ . '/includes/outdoor-work-images.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     @session_start();
@@ -156,6 +158,252 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         house_redirect($house_id, 'permanent');
     }
 
+    // OUTDOOR WORK
+    $outdoor_work_types = ['deck_patio', 'fence', 'driveway', 'landscaping', 'irrigation', 'pool', 'shed', 'gutters', 'roofing', 'siding', 'retaining_wall', 'other'];
+
+    if (isset($_POST['add_outdoor_work']) && !empty(trim($_POST['outdoor_description'] ?? ''))) {
+        $work_type = $_POST['outdoor_work_type'] ?? 'other';
+        if (!in_array($work_type, $outdoor_work_types, true)) {
+            $work_type = 'other';
+        }
+        $work_type = mysqli_real_escape_string($conn, $work_type);
+        $description = mysqli_real_escape_string($conn, trim($_POST['outdoor_description']));
+        $date_completed = mysqli_real_escape_string($conn, $_POST['outdoor_date_completed'] ?? '');
+        $contractor = mysqli_real_escape_string($conn, trim($_POST['outdoor_contractor'] ?? ''));
+        $notes = mysqli_real_escape_string($conn, trim($_POST['outdoor_notes'] ?? ''));
+        $date_sql = $date_completed !== '' ? "'$date_completed'" : 'NULL';
+        $conn->query("INSERT INTO outdoor_work_items (house_id, work_type, description, date_completed, contractor, notes)
+                      VALUES ($house_id, '$work_type', '$description', $date_sql, '$contractor', '$notes')");
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=outdoor_work&saved=1');
+        exit;
+    }
+    if (isset($_POST['update_outdoor_work']) && !empty(trim($_POST['outdoor_description'] ?? ''))) {
+        $outdoor_id = intval($_POST['outdoor_id'] ?? 0);
+        $work_type = $_POST['outdoor_work_type'] ?? 'other';
+        if (!in_array($work_type, $outdoor_work_types, true)) {
+            $work_type = 'other';
+        }
+        $work_type = mysqli_real_escape_string($conn, $work_type);
+        $description = mysqli_real_escape_string($conn, trim($_POST['outdoor_description']));
+        $date_completed = mysqli_real_escape_string($conn, $_POST['outdoor_date_completed'] ?? '');
+        $contractor = mysqli_real_escape_string($conn, trim($_POST['outdoor_contractor'] ?? ''));
+        $notes = mysqli_real_escape_string($conn, trim($_POST['outdoor_notes'] ?? ''));
+        $date_sql = $date_completed !== '' ? "'$date_completed'" : 'NULL';
+        if ($outdoor_id > 0) {
+            $conn->query("UPDATE outdoor_work_items
+                          SET work_type='$work_type', description='$description', date_completed=$date_sql,
+                              contractor='$contractor', notes='$notes'
+                          WHERE id=$outdoor_id AND house_id=$house_id");
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=outdoor_work&saved=1');
+        exit;
+    }
+    if (isset($_POST['delete_outdoor_work'])) {
+        $outdoor_id = intval($_POST['outdoor_id'] ?? 0);
+        if ($outdoor_id > 0) {
+            hds_outdoor_work_delete_image_files($conn, $outdoor_id, $house_id);
+            $conn->query("DELETE FROM outdoor_work_items WHERE id=$outdoor_id AND house_id=$house_id");
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=outdoor_work&saved=1');
+        exit;
+    }
+    if (isset($_POST['upload_outdoor_work_image'])) {
+        $outdoor_id = intval($_POST['outdoor_id'] ?? 0);
+        $owned = $outdoor_id > 0
+            ? $conn->query("SELECT id FROM outdoor_work_items WHERE id=$outdoor_id AND house_id=$house_id LIMIT 1")
+            : null;
+        $upload_errors = [];
+        $upload_count = 0;
+
+        if (!$owned || $owned->num_rows === 0) {
+            $upload_errors[] = 'Outdoor work item not found.';
+        } else {
+            $dir_error = hds_outdoor_work_ensure_upload_dir();
+            if ($dir_error !== null) {
+                $upload_errors[] = $dir_error;
+            } elseif (empty($_FILES['outdoor_images']['name']) || !is_array($_FILES['outdoor_images']['name'])) {
+                $upload_errors[] = 'No photo file was selected.';
+            } else {
+                $target_dir = hds_outdoor_work_upload_dir();
+                $allowed = hds_outdoor_work_allowed_extensions();
+                $max = 10;
+                foreach ($_FILES['outdoor_images']['tmp_name'] as $k => $tmp) {
+                    if ($upload_count >= $max) {
+                        break;
+                    }
+                    $original_name = basename((string)($_FILES['outdoor_images']['name'][$k] ?? ''));
+                    $upload_err = (int)($_FILES['outdoor_images']['error'][$k] ?? UPLOAD_ERR_NO_FILE);
+                    if ($upload_err !== UPLOAD_ERR_OK) {
+                        if ($original_name !== '') {
+                            $upload_errors[] = $original_name . ': upload failed (error code ' . $upload_err . ').';
+                        }
+                        continue;
+                    }
+                    $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
+                    if (!in_array($ext, $allowed, true)) {
+                        $upload_errors[] = $original_name . ': file type not allowed (use JPG, PNG, GIF, or WebP).';
+                        continue;
+                    }
+                    $final_name = time() . '_' . $outdoor_id . '_' . preg_replace('/[^a-zA-Z0-9._\-]/', '_', $original_name);
+                    $target = $target_dir . $final_name;
+                    if (move_uploaded_file($tmp, $target)) {
+                        $safe_name = mysqli_real_escape_string($conn, $final_name);
+                        if ($conn->query("INSERT INTO outdoor_work_images (outdoor_work_id, filename) VALUES ($outdoor_id, '$safe_name')")) {
+                            $upload_count++;
+                        } else {
+                            @unlink($target);
+                            $upload_errors[] = $original_name . ': saved to disk but database insert failed.';
+                        }
+                    } else {
+                        $upload_errors[] = $original_name . ': could not save file (check folder permissions).';
+                    }
+                }
+            }
+        }
+
+        if ($upload_count > 0) {
+            $_SESSION['outdoor_photo_success'] = $upload_count === 1
+                ? '1 photo uploaded successfully.'
+                : $upload_count . ' photos uploaded successfully.';
+        }
+        if (!empty($upload_errors)) {
+            $_SESSION['outdoor_photo_error'] = implode(' ', $upload_errors);
+        } elseif ($upload_count === 0 && empty($_SESSION['outdoor_photo_success'])) {
+            $_SESSION['outdoor_photo_error'] = 'No photos were uploaded.';
+        }
+
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=outdoor_work&saved=1');
+        exit;
+    }
+    if (isset($_POST['delete_outdoor_work_image'])) {
+        $outdoor_id = intval($_POST['outdoor_id'] ?? 0);
+        $image_id = intval($_POST['outdoor_image_id'] ?? 0);
+        if ($outdoor_id > 0 && $image_id > 0) {
+            $result = $conn->query(
+                "SELECT i.filename
+                 FROM outdoor_work_images i
+                 INNER JOIN outdoor_work_items w ON i.outdoor_work_id = w.id
+                 WHERE i.id=$image_id AND i.outdoor_work_id=$outdoor_id AND w.house_id=$house_id
+                 LIMIT 1"
+            );
+            if ($result && ($row = $result->fetch_assoc())) {
+                $path = hds_outdoor_work_upload_dir() . $row['filename'];
+                if (is_file($path)) {
+                    unlink($path);
+                }
+                $conn->query("DELETE FROM outdoor_work_images WHERE id=$image_id AND outdoor_work_id=$outdoor_id");
+            }
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=outdoor_work&saved=1');
+        exit;
+    }
+    if (isset($_POST['rename_outdoor_work_image'])) {
+        $outdoor_id = intval($_POST['outdoor_id'] ?? 0);
+        $image_id = intval($_POST['outdoor_image_id'] ?? 0);
+        $new_basename_raw = trim($_POST['outdoor_image_basename'] ?? '');
+
+        if ($outdoor_id > 0 && $image_id > 0 && $new_basename_raw !== '') {
+            $result = $conn->query(
+                "SELECT i.filename
+                 FROM outdoor_work_images i
+                 INNER JOIN outdoor_work_items w ON i.outdoor_work_id = w.id
+                 WHERE i.id=$image_id AND i.outdoor_work_id=$outdoor_id AND w.house_id=$house_id
+                 LIMIT 1"
+            );
+            if ($result && ($row = $result->fetch_assoc())) {
+                $old_filename = $row['filename'];
+                $old_ext = strtolower(pathinfo($old_filename, PATHINFO_EXTENSION));
+                $basename = hds_outdoor_work_sanitize_basename($new_basename_raw);
+                $new_name = ($old_ext !== '') ? $basename . '.' . $old_ext : $basename;
+
+                if ($basename === '') {
+                    $_SESSION['outdoor_photo_error'] = 'Please enter a valid file name.';
+                } elseif ($new_name !== $old_filename) {
+                    $dir = hds_outdoor_work_upload_dir();
+                    $old_path = $dir . $old_filename;
+                    $new_path = $dir . $new_name;
+                    if (file_exists($new_path)) {
+                        $_SESSION['outdoor_photo_error'] = 'A file with that name already exists.';
+                    } elseif (file_exists($old_path) && rename($old_path, $new_path)) {
+                        $safe_name = mysqli_real_escape_string($conn, $new_name);
+                        $conn->query("UPDATE outdoor_work_images SET filename='$safe_name' WHERE id=$image_id AND outdoor_work_id=$outdoor_id");
+                        $_SESSION['outdoor_photo_success'] = 'Photo renamed successfully.';
+                    } elseif (file_exists($old_path)) {
+                        $_SESSION['outdoor_photo_error'] = 'Could not rename the file on disk.';
+                    } else {
+                        $safe_name = mysqli_real_escape_string($conn, $new_name);
+                        $conn->query("UPDATE outdoor_work_images SET filename='$safe_name' WHERE id=$image_id AND outdoor_work_id=$outdoor_id");
+                        $_SESSION['outdoor_photo_success'] = 'Photo name updated.';
+                    }
+                }
+            }
+        } else {
+            $_SESSION['outdoor_photo_error'] = 'Please enter a new file name.';
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=outdoor_work&saved=1');
+        exit;
+    }
+
+    // PERMANENT ITEMS - MAINTENANCE LOG
+    $permanent_log_types = ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'breakers'];
+
+    if (isset($_POST['add_permanent_log']) && !empty($_POST['perm_log_date'])) {
+        $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
+        $log_date = mysqli_real_escape_string($conn, $_POST['perm_log_date']);
+        $part_number = mysqli_real_escape_string($conn, trim($_POST['perm_log_part_number'] ?? ''));
+        $log_notes = mysqli_real_escape_string($conn, trim($_POST['perm_log_notes'] ?? ''));
+        $contractor = hds_permanent_log_parse_contractor_fields($_POST);
+        $completed_by = $contractor['completed_by'];
+        $price_sql = $contractor['contractor_price'] !== null ? $contractor['contractor_price'] : 'NULL';
+        $method_sql = $contractor['payment_method'] !== null
+            ? "'" . mysqli_real_escape_string($conn, $contractor['payment_method']) . "'"
+            : 'NULL';
+        $ref_sql = $contractor['payment_reference'] !== null
+            ? "'" . mysqli_real_escape_string($conn, $contractor['payment_reference']) . "'"
+            : 'NULL';
+        if (in_array($type, $permanent_log_types, true)) {
+            $conn->query("INSERT INTO permanent_maintenance_log
+                          (house_id, item_type, log_date, part_number, completed_by, contractor_price, payment_method, payment_reference, notes)
+                          VALUES ($house_id, '$type', '$log_date', '$part_number', '$completed_by', $price_sql, $method_sql, $ref_sql, '$log_notes')");
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=' . urlencode($type) . '&saved=1');
+        exit;
+    }
+    if (isset($_POST['update_permanent_log'])) {
+        $log_id = intval($_POST['permanent_log_id'] ?? 0);
+        $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
+        $log_date = mysqli_real_escape_string($conn, $_POST['perm_log_date'] ?? '');
+        $part_number = mysqli_real_escape_string($conn, trim($_POST['perm_log_part_number'] ?? ''));
+        $log_notes = mysqli_real_escape_string($conn, trim($_POST['perm_log_notes'] ?? ''));
+        $contractor = hds_permanent_log_parse_contractor_fields($_POST);
+        $completed_by = $contractor['completed_by'];
+        $price_sql = $contractor['contractor_price'] !== null ? $contractor['contractor_price'] : 'NULL';
+        $method_sql = $contractor['payment_method'] !== null
+            ? "'" . mysqli_real_escape_string($conn, $contractor['payment_method']) . "'"
+            : 'NULL';
+        $ref_sql = $contractor['payment_reference'] !== null
+            ? "'" . mysqli_real_escape_string($conn, $contractor['payment_reference']) . "'"
+            : 'NULL';
+        if ($log_id > 0 && $log_date !== '' && in_array($type, $permanent_log_types, true)) {
+            $conn->query("UPDATE permanent_maintenance_log
+                          SET log_date='$log_date', part_number='$part_number', completed_by='$completed_by',
+                              contractor_price=$price_sql, payment_method=$method_sql, payment_reference=$ref_sql,
+                              notes='$log_notes'
+                          WHERE id=$log_id AND house_id=$house_id AND item_type='$type'");
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=' . urlencode($type) . '&saved=1');
+        exit;
+    }
+    if (isset($_POST['delete_permanent_log'])) {
+        $log_id = intval($_POST['permanent_log_id'] ?? 0);
+        $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
+        if ($log_id > 0 && in_array($type, $permanent_log_types, true)) {
+            $conn->query("DELETE FROM permanent_maintenance_log WHERE id=$log_id AND house_id=$house_id AND item_type='$type'");
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=' . urlencode($type) . '&saved=1');
+        exit;
+    }
+
     // ELECTRIC METER - SAVE ACCOUNT INFO
     if (isset($_POST['save_meter_account'])) {
         $meter_number = mysqli_real_escape_string($conn, $_POST['meter_number'] ?? '');
@@ -277,7 +525,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['add_breaker_panel'])) {
         $panel_name = mysqli_real_escape_string($conn, $_POST['new_panel_name'] ?? 'Main Panel');
         $panel_size = intval($_POST['new_panel_size'] ?? 24);
-        if (!in_array($panel_size, [6, 12, 24, 28], true)) {
+        if (!in_array($panel_size, [6, 12, 24, 28, 30], true)) {
             $panel_size = 24;
         }
         $conn->query("INSERT INTO electric_panels (house_id, name, size) VALUES ($house_id, '$panel_name', $panel_size)");
@@ -950,8 +1198,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260627f">
-    <script src="scripts.js?v=20260627f"></script>
+    <link rel="stylesheet" href="styles.css?v=20260627i">
+    <script src="scripts.js?v=20260627h"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
