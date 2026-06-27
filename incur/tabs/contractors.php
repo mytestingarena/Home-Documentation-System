@@ -10,15 +10,27 @@ global $conn, $house_id;
 <div class="section-card">
     <h3>Add Contractor</h3>
     <form method="post" class="contractor-add-form">
-        <label>Name:</label>
-        <input type="text" name="contractor_name" placeholder="Company or contact name" required>
-        <label>What they do:</label>
-        <input type="text" name="contractor_trade" placeholder="e.g. Plumber, Electrician, Tree removal">
-        <label>Phone:</label>
-        <input type="text" name="contractor_phone" placeholder="e.g. 608-555-1234">
-        <label>City:</label>
-        <input type="text" name="contractor_city" placeholder="e.g. Madison">
-        <input type="submit" name="add_contractor" value="Add Contractor">
+        <div class="contractor-form-row">
+            <div class="contractor-field">
+                <label for="contractor_name_new">Name</label>
+                <input type="text" id="contractor_name_new" name="contractor_name" placeholder="Company or contact name" required>
+            </div>
+            <div class="contractor-field">
+                <label for="contractor_trade_new">What they do</label>
+                <input type="text" id="contractor_trade_new" name="contractor_trade" placeholder="Plumber, Electrician, etc.">
+            </div>
+            <div class="contractor-field">
+                <label for="contractor_phone_new">Phone</label>
+                <input type="text" id="contractor_phone_new" name="contractor_phone" placeholder="608-555-1234">
+            </div>
+            <div class="contractor-field">
+                <label for="contractor_city_new">City</label>
+                <input type="text" id="contractor_city_new" name="contractor_city" placeholder="Madison">
+            </div>
+            <div class="contractor-field contractor-field--submit">
+                <input type="submit" name="add_contractor" value="Add Contractor" class="small-btn">
+            </div>
+        </div>
     </form>
 </div>
 
@@ -47,7 +59,7 @@ if ($contractors && $contractors->num_rows > 0) {
         echo "</form>";
         echo "</div>";
         echo "</div>";
-        echo "<div class='hds-ve-body'>";
+        echo "<div class='hds-ve-body contractor-details'>";
         echo "<p class='hds-ve-field'><span class='hds-ve-label'>What they do:</span> " . hds_ve_display($row['trade'] ?? '') . "</p>";
         echo "<p class='hds-ve-field'><span class='hds-ve-label'>Phone:</span> " . hds_ve_display($row['phone'] ?? '') . "</p>";
         echo "<p class='hds-ve-field'><span class='hds-ve-label'>City:</span> " . hds_ve_display($row['city'] ?? '') . "</p>";
@@ -55,16 +67,14 @@ if ($contractors && $contractors->num_rows > 0) {
         echo "</div>";
 
         echo "<div data-view-edit-form hidden>";
-        echo "<form method='post'>";
+        echo "<form method='post' class='contractor-edit-form'>";
         echo "<input type='hidden' name='contractor_id' value='$contractor_id'>";
-        echo "<label>Name:</label><br>";
-        echo "<input type='text' name='contractor_name' value=\"$name\" required style='width:100%;'><br><br>";
-        echo "<label>What they do:</label><br>";
-        echo "<input type='text' name='contractor_trade' value=\"$trade\" style='width:100%;'><br><br>";
-        echo "<label>Phone:</label><br>";
-        echo "<input type='text' name='contractor_phone' value=\"$phone\" style='width:100%;'><br><br>";
-        echo "<label>City:</label><br>";
-        echo "<input type='text' name='contractor_city' value=\"$city\" style='width:100%;'><br><br>";
+        echo "<div class='contractor-form-row'>";
+        echo "<div class='contractor-field'><label>Name</label><input type='text' name='contractor_name' value=\"$name\" required></div>";
+        echo "<div class='contractor-field'><label>What they do</label><input type='text' name='contractor_trade' value=\"$trade\"></div>";
+        echo "<div class='contractor-field'><label>Phone</label><input type='text' name='contractor_phone' value=\"$phone\"></div>";
+        echo "<div class='contractor-field'><label>City</label><input type='text' name='contractor_city' value=\"$city\"></div>";
+        echo "</div>";
         echo "<div class='hds-ve-edit-actions'>";
         echo "<input type='submit' name='update_contractor' value='Save'>";
         echo "<button type='button' class='small-btn' data-view-edit-cancel>Cancel</button>";
