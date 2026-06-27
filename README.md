@@ -6,6 +6,8 @@ Home Documentation System (HDS) is a PHP web app that gives homeowners one organ
 
 This repository contains **application source only** — no user uploads, house records, WiFi passwords, or database dumps.
 
+**Support:** If you find HDS useful, donations are welcome via Bitcoin: `bc1qdj9d6llxz0qswhewqwnmy8zl63lydm0p2mrk`
+
 ---
 
 ## Why homeowners need this

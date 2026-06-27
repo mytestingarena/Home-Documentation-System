@@ -1976,6 +1976,16 @@ body.media-rename-active {
     margin: 0;
 }
 
+.site-footer-donate {
+    margin-top: 8px !important;
+    font-size: 0.9em;
+}
+
+.site-footer-donate code {
+    font-size: 0.95em;
+    word-break: break-all;
+}
+
 /* Admin tab */
 .tablink--admin {
     margin-left: auto;
