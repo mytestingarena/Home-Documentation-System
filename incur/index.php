@@ -67,6 +67,7 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
         $conn->query("DELETE FROM propane_utilities WHERE house_id = $house_id");
         $conn->query("DELETE FROM permanent_items WHERE house_id = $house_id");
         $conn->query("DELETE FROM household_items WHERE house_id = $house_id");
+        @$conn->query("DELETE FROM contractors WHERE house_id = $house_id");
         $conn->query("DELETE FROM tools WHERE house_id = $house_id");
         $conn->query("DELETE FROM maintenance_equipment WHERE house_id = $house_id");
         @$conn->query("DELETE FROM wifi_networks WHERE house_id = $house_id");

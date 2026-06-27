@@ -34,7 +34,7 @@ if ($result->num_rows == 0) {
 $house = $result->fetch_assoc();
 $house_name = htmlspecialchars($house['name'] ?? 'Unknown House');
 
-$valid_tabs = ['permanent', 'utility', 'household', 'tools', 'maintenance', 'media', 'designs', 'manuals', 'map', 'wifi', 'projects', 'admin'];
+$valid_tabs = ['permanent', 'utility', 'household', 'contractors', 'tools', 'maintenance', 'media', 'designs', 'manuals', 'map', 'wifi', 'projects', 'admin'];
 $hds_ui_settings = hds_ui_load_settings($conn, $house_id);
 $active_tab = $_GET['tab'] ?? 'permanent';
 if (!in_array($active_tab, $valid_tabs, true)) {
@@ -595,6 +595,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $item_id = intval($_POST['item_id'] ?? 0);
         $conn->query("DELETE FROM household_items WHERE id=$item_id AND house_id=$house_id");
         house_redirect($house_id, 'household');
+    }
+
+    // CONTRACTORS
+    if (isset($_POST['add_contractor']) && !empty(trim($_POST['contractor_name'] ?? ''))) {
+        $name  = mysqli_real_escape_string($conn, trim($_POST['contractor_name']));
+        $trade = mysqli_real_escape_string($conn, trim($_POST['contractor_trade'] ?? ''));
+        $phone = mysqli_real_escape_string($conn, trim($_POST['contractor_phone'] ?? ''));
+        $city  = mysqli_real_escape_string($conn, trim($_POST['contractor_city'] ?? ''));
+        $conn->query("INSERT INTO contractors (house_id, name, trade, phone, city)
+                      VALUES ($house_id, '$name', '$trade', '$phone', '$city')");
+        house_redirect($house_id, 'contractors');
+    }
+    if (isset($_POST['update_contractor']) && !empty(trim($_POST['contractor_name'] ?? ''))) {
+        $contractor_id = intval($_POST['contractor_id'] ?? 0);
+        $name  = mysqli_real_escape_string($conn, trim($_POST['contractor_name']));
+        $trade = mysqli_real_escape_string($conn, trim($_POST['contractor_trade'] ?? ''));
+        $phone = mysqli_real_escape_string($conn, trim($_POST['contractor_phone'] ?? ''));
+        $city  = mysqli_real_escape_string($conn, trim($_POST['contractor_city'] ?? ''));
+        if ($contractor_id > 0) {
+            $conn->query("UPDATE contractors SET name='$name', trade='$trade', phone='$phone', city='$city'
+                          WHERE id=$contractor_id AND house_id=$house_id");
+        }
+        house_redirect($house_id, 'contractors');
+    }
+    if (isset($_POST['delete_contractor'])) {
+        $contractor_id = intval($_POST['contractor_id'] ?? 0);
+        if ($contractor_id > 0) {
+            $conn->query("DELETE FROM contractors WHERE id=$contractor_id AND house_id=$house_id");
+        }
+        house_redirect($house_id, 'contractors');
     }
 
     // TOOLS
@@ -1198,7 +1228,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260627i">
+    <link rel="stylesheet" href="styles.css?v=20260627j">
     <script src="scripts.js?v=20260627h"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>

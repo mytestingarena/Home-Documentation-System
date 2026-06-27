@@ -7,6 +7,7 @@ function hds_ui_registry(): array {
             'permanent'   => ['label' => 'Permanent Items',   'icon' => 'fa-tools'],
             'utility'     => ['label' => 'Utility Services',  'icon' => 'fa-bolt'],
             'household'   => ['label' => 'Household Items',   'icon' => 'fa-home'],
+            'contractors' => ['label' => 'Contractors',       'icon' => 'fa-hard-hat'],
             'tools'       => ['label' => 'Tools',             'icon' => 'fa-toolbox'],
             'maintenance' => ['label' => 'Maintenance',       'icon' => 'fa-oil-can'],
             'media'       => ['label' => 'Media',             'icon' => 'fa-images'],
