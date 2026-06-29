@@ -114,7 +114,8 @@ function scrollToOpenSection() {
     ["open_panel", "panel-"],
     ["open_utility", "utility-"],
     ["open_media", "media-"],
-    ["open_permanent", "permanent-"]
+    ["open_permanent", "permanent-"],
+    ["open_homelab", "homelab-"]
   ];
 
   for (var i = 0; i < scrollKeys.length; i++) {

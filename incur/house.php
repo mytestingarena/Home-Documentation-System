@@ -15,6 +15,7 @@ require_once __DIR__ . '/includes/ui-settings.php';
 require_once __DIR__ . '/includes/view-edit.php';
 require_once __DIR__ . '/includes/permanent-maintenance-log.php';
 require_once __DIR__ . '/includes/outdoor-work-images.php';
+require_once __DIR__ . '/includes/homelab.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     @session_start();
@@ -34,7 +35,7 @@ if ($result->num_rows == 0) {
 $house = $result->fetch_assoc();
 $house_name = htmlspecialchars($house['name'] ?? 'Unknown House');
 
-$valid_tabs = ['permanent', 'utility', 'household', 'contractors', 'tools', 'maintenance', 'media', 'designs', 'manuals', 'map', 'wifi', 'projects', 'admin'];
+$valid_tabs = ['permanent', 'utility', 'household', 'contractors', 'homelab', 'tools', 'maintenance', 'media', 'designs', 'manuals', 'map', 'wifi', 'projects', 'admin'];
 $hds_ui_settings = hds_ui_load_settings($conn, $house_id);
 $active_tab = $_GET['tab'] ?? 'permanent';
 if (!in_array($active_tab, $valid_tabs, true)) {
@@ -625,6 +626,131 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $conn->query("DELETE FROM contractors WHERE id=$contractor_id AND house_id=$house_id");
         }
         house_redirect($house_id, 'contractors');
+    }
+
+    // HOME LAB — HARDWARE
+    $homelab_device_types = array_keys(hds_homelab_device_types());
+    $homelab_instance_types = array_keys(hds_homelab_instance_types());
+
+    if (isset($_POST['add_homelab_hardware']) && !empty(trim($_POST['hw_name'] ?? ''))) {
+        $device_type = in_array($_POST['hw_device_type'] ?? '', $homelab_device_types, true) ? $_POST['hw_device_type'] : 'server';
+        $conn->query("INSERT INTO homelab_hardware
+                      (house_id, name, device_type, make_model, cpu, ram, storage, ip_address, mac_address, location, role, serial_number, notes)
+                      VALUES ($house_id,
+                      '" . hds_homelab_esc($conn, $_POST['hw_name']) . "',
+                      '" . hds_homelab_esc($conn, $device_type) . "',
+                      '" . hds_homelab_esc($conn, $_POST['hw_make_model'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['hw_cpu'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['hw_ram'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['hw_storage'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['hw_ip'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['hw_mac'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['hw_location'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['hw_role'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['hw_serial'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['hw_notes'] ?? '') . "')");
+        header('Location: house.php?id=' . $house_id . '&tab=homelab&open_homelab=hardware');
+        exit;
+    }
+    if (isset($_POST['update_homelab_hardware']) && !empty(trim($_POST['hw_name'] ?? ''))) {
+        $hw_id = intval($_POST['hw_id'] ?? 0);
+        $device_type = in_array($_POST['hw_device_type'] ?? '', $homelab_device_types, true) ? $_POST['hw_device_type'] : 'server';
+        if ($hw_id > 0) {
+            $conn->query("UPDATE homelab_hardware SET
+                          name='" . hds_homelab_esc($conn, $_POST['hw_name']) . "',
+                          device_type='" . hds_homelab_esc($conn, $device_type) . "',
+                          make_model='" . hds_homelab_esc($conn, $_POST['hw_make_model'] ?? '') . "',
+                          cpu='" . hds_homelab_esc($conn, $_POST['hw_cpu'] ?? '') . "',
+                          ram='" . hds_homelab_esc($conn, $_POST['hw_ram'] ?? '') . "',
+                          storage='" . hds_homelab_esc($conn, $_POST['hw_storage'] ?? '') . "',
+                          ip_address='" . hds_homelab_esc($conn, $_POST['hw_ip'] ?? '') . "',
+                          mac_address='" . hds_homelab_esc($conn, $_POST['hw_mac'] ?? '') . "',
+                          location='" . hds_homelab_esc($conn, $_POST['hw_location'] ?? '') . "',
+                          role='" . hds_homelab_esc($conn, $_POST['hw_role'] ?? '') . "',
+                          serial_number='" . hds_homelab_esc($conn, $_POST['hw_serial'] ?? '') . "',
+                          notes='" . hds_homelab_esc($conn, $_POST['hw_notes'] ?? '') . "'
+                          WHERE id=$hw_id AND house_id=$house_id");
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=homelab&open_homelab=hardware');
+        exit;
+    }
+    if (isset($_POST['delete_homelab_hardware'])) {
+        $hw_id = intval($_POST['hw_id'] ?? 0);
+        if ($hw_id > 0) {
+            $conn->query("DELETE FROM homelab_hardware WHERE id=$hw_id AND house_id=$house_id");
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=homelab&open_homelab=hardware');
+        exit;
+    }
+
+    // HOME LAB — LXC / VMs
+    if (isset($_POST['add_homelab_instance']) && !empty(trim($_POST['inst_name'] ?? ''))) {
+        $instance_type = in_array($_POST['inst_type'] ?? '', $homelab_instance_types, true) ? $_POST['inst_type'] : 'lxc';
+        $hardware_id = intval($_POST['inst_hardware_id'] ?? 0);
+        if ($hardware_id > 0) {
+            $hw_check = $conn->query("SELECT id FROM homelab_hardware WHERE id=$hardware_id AND house_id=$house_id LIMIT 1");
+            if (!$hw_check || $hw_check->num_rows === 0) {
+                $hardware_id = 0;
+            }
+        }
+        $hw_sql = $hardware_id > 0 ? $hardware_id : 'NULL';
+        $conn->query("INSERT INTO homelab_instances
+                      (house_id, name, instance_type, hardware_id, os, ip_address, cpu_cores, ram, disk, network, ports, purpose, backup_notes, notes)
+                      VALUES ($house_id,
+                      '" . hds_homelab_esc($conn, $_POST['inst_name']) . "',
+                      '" . hds_homelab_esc($conn, $instance_type) . "',
+                      $hw_sql,
+                      '" . hds_homelab_esc($conn, $_POST['inst_os'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['inst_ip'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['inst_cpu'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['inst_ram'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['inst_disk'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['inst_network'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['inst_ports'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['inst_purpose'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['inst_backup'] ?? '') . "',
+                      '" . hds_homelab_esc($conn, $_POST['inst_notes'] ?? '') . "')");
+        header('Location: house.php?id=' . $house_id . '&tab=homelab&open_homelab=instances');
+        exit;
+    }
+    if (isset($_POST['update_homelab_instance']) && !empty(trim($_POST['inst_name'] ?? ''))) {
+        $inst_id = intval($_POST['inst_id'] ?? 0);
+        $instance_type = in_array($_POST['inst_type'] ?? '', $homelab_instance_types, true) ? $_POST['inst_type'] : 'lxc';
+        $hardware_id = intval($_POST['inst_hardware_id'] ?? 0);
+        if ($hardware_id > 0) {
+            $hw_check = $conn->query("SELECT id FROM homelab_hardware WHERE id=$hardware_id AND house_id=$house_id LIMIT 1");
+            if (!$hw_check || $hw_check->num_rows === 0) {
+                $hardware_id = 0;
+            }
+        }
+        $hw_sql = $hardware_id > 0 ? $hardware_id : 'NULL';
+        if ($inst_id > 0) {
+            $conn->query("UPDATE homelab_instances SET
+                          name='" . hds_homelab_esc($conn, $_POST['inst_name']) . "',
+                          instance_type='" . hds_homelab_esc($conn, $instance_type) . "',
+                          hardware_id=$hw_sql,
+                          os='" . hds_homelab_esc($conn, $_POST['inst_os'] ?? '') . "',
+                          ip_address='" . hds_homelab_esc($conn, $_POST['inst_ip'] ?? '') . "',
+                          cpu_cores='" . hds_homelab_esc($conn, $_POST['inst_cpu'] ?? '') . "',
+                          ram='" . hds_homelab_esc($conn, $_POST['inst_ram'] ?? '') . "',
+                          disk='" . hds_homelab_esc($conn, $_POST['inst_disk'] ?? '') . "',
+                          network='" . hds_homelab_esc($conn, $_POST['inst_network'] ?? '') . "',
+                          ports='" . hds_homelab_esc($conn, $_POST['inst_ports'] ?? '') . "',
+                          purpose='" . hds_homelab_esc($conn, $_POST['inst_purpose'] ?? '') . "',
+                          backup_notes='" . hds_homelab_esc($conn, $_POST['inst_backup'] ?? '') . "',
+                          notes='" . hds_homelab_esc($conn, $_POST['inst_notes'] ?? '') . "'
+                          WHERE id=$inst_id AND house_id=$house_id");
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=homelab&open_homelab=instances');
+        exit;
+    }
+    if (isset($_POST['delete_homelab_instance'])) {
+        $inst_id = intval($_POST['inst_id'] ?? 0);
+        if ($inst_id > 0) {
+            $conn->query("DELETE FROM homelab_instances WHERE id=$inst_id AND house_id=$house_id");
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=homelab&open_homelab=instances');
+        exit;
     }
 
     // TOOLS
@@ -1228,7 +1354,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260627k">
+    <link rel="stylesheet" href="styles.css?v=20260627l">
     <script src="scripts.js?v=20260627h"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>

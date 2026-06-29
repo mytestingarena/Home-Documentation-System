@@ -8,6 +8,7 @@ function hds_ui_registry(): array {
             'utility'     => ['label' => 'Utility Services',  'icon' => 'fa-bolt'],
             'household'   => ['label' => 'Household Items',   'icon' => 'fa-home'],
             'contractors' => ['label' => 'Contractors',       'icon' => 'fa-hard-hat'],
+            'homelab'     => ['label' => 'Home Lab',          'icon' => 'fa-server'],
             'tools'       => ['label' => 'Tools',             'icon' => 'fa-toolbox'],
             'maintenance' => ['label' => 'Maintenance',       'icon' => 'fa-oil-can'],
             'media'       => ['label' => 'Media',             'icon' => 'fa-images'],
@@ -56,6 +57,10 @@ function hds_ui_registry(): array {
             'projects' => [
                 'projects-active'    => 'Active Projects',
                 'projects-completed' => 'Completed Projects Tracker',
+            ],
+            'homelab' => [
+                'homelab-hardware'  => 'Hardware',
+                'homelab-instances' => 'LXC / VMs',
             ],
         ],
     ];
