@@ -110,6 +110,14 @@ Tailor the app to each house.
 
 Tested on **Debian 13 (Trixie)** LXC or VM. Run as **root** inside an LXC; on a normal host the script can re-launch via `sudo`.
 
+### One-liner (easiest)
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/mytestingarena/Home-Documentation-System/main/bootstrap-install.sh)"
+```
+
+This downloads the latest release from GitHub, installs `git`/`curl` if needed, clones the repo, and launches the interactive `install.sh`. Answer the prompts (see cheat sheet below).
+
 ### Full install (copy and run)
 
 ```bash

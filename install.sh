@@ -43,6 +43,12 @@ print_start_over_instructions() {
 Start over from scratch (recommended after a failed install)
 ----------------------------------------------------------------------
 
+One-liner (Debian/Ubuntu as root):
+
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/mytestingarena/Home-Documentation-System/main/bootstrap-install.sh)"
+
+Or step by step:
+
   cd ~
   rm -rf Home-Documentation-System
   git clone https://github.com/mytestingarena/Home-Documentation-System.git
