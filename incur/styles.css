@@ -1258,10 +1258,33 @@ h1 {
     }
 
     #pageHeader {
-        position: sticky;
+        position: fixed;
         top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
         z-index: 1001;
-        border-radius: 12px 12px 0 0;
+        border-radius: 0;
+        box-sizing: border-box;
+        padding-left: max(20px, env(safe-area-inset-left, 0px));
+        padding-right: max(20px, env(safe-area-inset-right, 0px));
+        transition: transform 0.25s ease;
+        will-change: transform;
+    }
+
+    body.has-mobile-header {
+        padding-top: var(--hds-header-offset, 0px);
+    }
+
+    body.header-hidden-mobile #pageHeader {
+        transform: translateY(-100%);
+        pointer-events: none;
+    }
+
+    body.menu-open #pageHeader,
+    body.sidebar-open #pageHeader {
+        transform: translateY(0);
+        pointer-events: auto;
     }
 
     .menu-toggle {

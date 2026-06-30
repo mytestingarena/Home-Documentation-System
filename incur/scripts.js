@@ -9,12 +9,76 @@ function positionMobileMenu() {
   if (!header) return;
 
   if (isMobileMenu()) {
-    var bottom = Math.round(header.getBoundingClientRect().bottom);
+    var bottom = Math.max(0, Math.round(header.getBoundingClientRect().bottom));
     document.documentElement.style.setProperty("--hds-menu-top", bottom + "px");
   } else {
     document.documentElement.style.removeProperty("--hds-menu-top");
+    document.body.classList.remove("has-mobile-header", "header-hidden-mobile");
+    document.documentElement.style.removeProperty("--hds-header-offset");
     closeSidebar();
   }
+}
+
+function updateMobileHeaderOffset() {
+  var header = document.getElementById("pageHeader");
+  if (!header || !isMobileMenu()) {
+    document.body.classList.remove("has-mobile-header");
+    document.documentElement.style.removeProperty("--hds-header-offset");
+    return;
+  }
+  document.body.classList.add("has-mobile-header");
+  document.documentElement.style.setProperty("--hds-header-offset", Math.ceil(header.offsetHeight) + "px");
+  positionMobileMenu();
+}
+
+function initMobileHeaderScroll() {
+  var lastY = window.scrollY || 0;
+  var ticking = false;
+  var delta = 10;
+
+  function handleScroll() {
+    if (!isMobileMenu()) {
+      document.body.classList.remove("header-hidden-mobile");
+      return;
+    }
+    if (document.body.classList.contains("sidebar-open") || document.body.classList.contains("menu-open")) {
+      document.body.classList.remove("header-hidden-mobile");
+      positionMobileMenu();
+      return;
+    }
+
+    var y = window.scrollY || 0;
+    if (y <= delta) {
+      document.body.classList.remove("header-hidden-mobile");
+    } else if (y > lastY + delta) {
+      document.body.classList.add("header-hidden-mobile");
+    } else if (y < lastY - delta) {
+      document.body.classList.remove("header-hidden-mobile");
+    }
+    lastY = y;
+    positionMobileMenu();
+  }
+
+  window.addEventListener("scroll", function() {
+    if (!ticking) {
+      window.requestAnimationFrame(function() {
+        handleScroll();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+
+  function onLayoutChange() {
+    updateMobileHeaderOffset();
+    if (!isMobileMenu()) {
+      document.body.classList.remove("header-hidden-mobile");
+    }
+  }
+
+  window.addEventListener("resize", onLayoutChange);
+  window.addEventListener("orientationchange", onLayoutChange);
+  onLayoutChange();
 }
 
 function activateTab(tabName) {
@@ -91,7 +155,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  positionMobileMenu();
+  initMobileHeaderScroll();
   activateTab(getInitialTab());
   scrollToOpenSection();
   initMediaLightbox();
@@ -103,8 +167,6 @@ document.addEventListener("DOMContentLoaded", function() {
   initPermanentLogContractorFields();
 });
 
-window.addEventListener("resize", positionMobileMenu);
-window.addEventListener("orientationchange", positionMobileMenu);
 
 function collapsibleExpandAll(selector, expand) {
   var cards = document.querySelectorAll(selector);
