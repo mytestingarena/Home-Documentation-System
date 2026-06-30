@@ -106,7 +106,21 @@ Tailor the app to each house.
 - Apache or nginx + php-fpm
 - ffmpeg (optional, recommended for walkthrough video compression)
 
-## Setup
+## Quick install (recommended)
+
+From the repository root on your server:
+
+```bash
+git clone https://github.com/mytestingarena/Home-Documentation-System.git
+cd Home-Documentation-System
+./install.sh
+```
+
+The installer asks for the web path, MySQL credentials, and WiFi/Admin tab passwords. It creates the database, imports `db/schema.sql` and `db/migrations.sql`, deploys `incur/` to your web root, writes `config.local.php`, and prepares upload directories.
+
+On a normal host you may be prompted to re-run via `sudo`. Inside an LXC you are usually already root — answer **no** to sudo and run `./install.sh` directly.
+
+## Manual setup
 
 1. Create the database and import schema:
    ```bash
@@ -117,9 +131,9 @@ Tailor the app to each house.
 
 2. Copy `incur/` to your web root (e.g. `/var/www/html/incur/`).
 
-3. Create `incur/config.local.php` from `incur/config.local.php.example` and set the real MySQL password.
+3. Create `incur/config.local.php` from `incur/config.local.php.example` and set the MySQL password plus `WIFI_TAB_PASSWORD` / `ADMIN_TAB_PASSWORD`.
 
-4. Set the WiFi and Admin tab passwords in `incur/house.php` (`WIFI_TAB_PASSWORD` / `ADMIN_TAB_PASSWORD`) or move them to `config.local.php` before production use.
+4. Alternatively, set tab passwords in `incur/house.php` before production use.
 
 5. Ensure upload directories are writable by the web server:
    ```bash

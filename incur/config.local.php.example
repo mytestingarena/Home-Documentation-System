@@ -1,6 +1,14 @@
 <?php
-// Copy to config.local.php on the server and set the real MySQL password.
+// Copy to config.local.php on the server (install.sh does this for you).
 // config.local.php is NOT uploaded during deploys — it stays only on the server.
 
 $password = 'your_mysql_password_here';
+
+// Tab unlock passwords (optional here if you prefer not to edit house.php).
+if (!defined('WIFI_TAB_PASSWORD')) {
+    define('WIFI_TAB_PASSWORD', 'your_wifi_tab_password_here');
+}
+if (!defined('ADMIN_TAB_PASSWORD')) {
+    define('ADMIN_TAB_PASSWORD', 'your_admin_tab_password_here');
+}
 ?>
