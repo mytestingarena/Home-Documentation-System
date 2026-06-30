@@ -12,9 +12,17 @@ incur/uploads/manuals/*
 !incur/uploads/manuals/.gitkeep
 incur/uploads/designs/*
 !incur/uploads/designs/.gitkeep
+incur/uploads/outdoor-work/*
+!incur/uploads/outdoor-work/.gitkeep
+incur/uploads/house-work/*
+!incur/uploads/house-work/.gitkeep
+incur/uploads/maintenance-log/*
+!incur/uploads/maintenance-log/.gitkeep
 
-# Database dumps and backups
+# Database dumps and backups (keep db/*.sql for install.sh)
 *.sql
+!db/
+!db/*.sql
 backup*
 *.bak
 
