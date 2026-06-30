@@ -4,9 +4,11 @@
 global $conn, $house_id;
 
 require_once __DIR__ . '/../includes/house-work-images.php';
+require_once __DIR__ . '/../includes/permanent-maintenance-log.php';
 
 $open_house_work_id = intval($_GET['open_house_work'] ?? 0);
 $house_work_open = ($open_house_work_id > 0 || ($_GET['open_permanent'] ?? '') === 'house_work') ? ' open' : '';
+$form_action = 'house.php?id=' . (int)$house_id . '&tab=permanent';
 
 function hds_house_work_types(): array
 {
@@ -58,14 +60,19 @@ function hds_render_house_work_type_select(string $name, string $selected = ''):
     </summary>
 
     <div class="collapsible-body">
-        <form method="post" action="house.php?id=<?php echo (int)$house_id; ?>&tab=permanent" class="house-work-add-form">
-            <label>Add house work:</label><br>
+        <form method="post" action="<?php echo htmlspecialchars($form_action, ENT_QUOTES, 'UTF-8'); ?>" class="house-work-add-form perm-log-form">
+            <label class="house-work-add-label">Add house work entry:</label>
             <?php hds_render_house_work_type_select('house_work_type'); ?>
             <input type="text" name="house_description" placeholder="Description (e.g. Foundation crack repair, east wall)" required>
             <input type="date" name="house_date_completed" title="Date completed">
-            <input type="text" name="house_contractor" placeholder="Contractor (optional)">
-            <input type="text" name="house_notes" placeholder="Notes (optional)">
-            <input type="submit" name="add_house_work" value="Add Item">
+            <input type="text" name="house_contractor" placeholder="Contractor name (if applicable)">
+            <div class="house-work-add-block">
+                <label>Completed by:</label><br>
+                <?php hds_render_permanent_completed_by_field('perm_log_completed_by', 'homeowner'); ?>
+                <?php hds_render_permanent_contractor_fields(); ?>
+            </div>
+            <input type="text" name="house_notes" placeholder="Notes (optional)" class="house-work-notes-input">
+            <input type="submit" name="add_house_work" value="Add Entry" class="house-work-add-submit">
         </form>
 
         <div class="house-work-list">
@@ -81,9 +88,20 @@ function hds_render_house_work_type_select(string $name, string $selected = ''):
                 $date_display = $date_raw !== '' ? date('M j, Y', strtotime($date_raw)) : '';
                 $contractor = htmlspecialchars($item['contractor'] ?? '', ENT_QUOTES, 'UTF-8');
                 $notes = htmlspecialchars($item['notes'] ?? '', ENT_QUOTES, 'UTF-8');
+                $completed_by = ($item['completed_by'] ?? '') === 'contractor' ? 'contractor' : 'homeowner';
+                $completed_label = htmlspecialchars(hds_permanent_log_completed_label($completed_by), ENT_QUOTES, 'UTF-8');
+                $contractor_price = isset($item['contractor_price']) && $item['contractor_price'] !== null
+                    ? (float)$item['contractor_price']
+                    : null;
+                $payment_method = $item['payment_method'] ?? null;
+                $payment_reference = $item['payment_reference'] ?? null;
+                $payment_label = hds_permanent_log_payment_label($payment_method);
                 $has_date = $date_raw !== '';
-                $has_contractor = trim($item['contractor'] ?? '') !== '';
+                $has_contractor_name = trim($item['contractor'] ?? '') !== '';
                 $has_notes = trim($item['notes'] ?? '') !== '';
+                $has_contractor_payment = $completed_by === 'contractor' && (
+                    $contractor_price !== null || $payment_label !== '' || trim((string)$payment_reference) !== ''
+                );
 
                 echo "<div class='house-work-entry-wrap'>";
                 echo "<div data-view-edit class='hds-ve-block hds-ve-block--card house-work-entry'>";
@@ -92,16 +110,34 @@ function hds_render_house_work_type_select(string $name, string $selected = ''):
                 echo "<div class='maintenance-log-view-meta'>";
                 echo "<strong class='maintenance-log-view-date'>$type_label</strong>";
                 echo "<span class='maintenance-log-view-hours'>$description</span>";
+                echo "<span class='maintenance-log-view-hours'>$completed_label</span>";
                 if ($has_date) {
                     echo "<span class='maintenance-log-view-hours'>Completed: " . htmlspecialchars($date_display, ENT_QUOTES, 'UTF-8') . "</span>";
                 }
-                if ($has_contractor) {
+                if ($has_contractor_name) {
                     echo "<span class='maintenance-log-view-hours'>Contractor: $contractor</span>";
+                }
+                if ($has_contractor_payment) {
+                    if ($contractor_price !== null) {
+                        $price_display = htmlspecialchars('$' . number_format($contractor_price, 2), ENT_QUOTES, 'UTF-8');
+                        echo "<span class='maintenance-log-view-hours'>Price: $price_display</span>";
+                    }
+                    if ($payment_label !== '' || trim((string)$payment_reference) !== '') {
+                        $payment_display = htmlspecialchars($payment_label, ENT_QUOTES, 'UTF-8');
+                        $ref_display = htmlspecialchars(trim((string)$payment_reference), ENT_QUOTES, 'UTF-8');
+                        $payment_line = $payment_display;
+                        if ($payment_line !== '' && $ref_display !== '') {
+                            $payment_line .= ' — ' . $ref_display;
+                        } elseif ($ref_display !== '') {
+                            $payment_line = $ref_display;
+                        }
+                        echo "<span class='maintenance-log-view-hours'>Payment: $payment_line</span>";
+                    }
                 }
                 echo "</div>";
                 echo "<div class='hds-ve-actions'>";
                 echo "<button type='button' class='small-btn' data-view-edit-open>Edit</button>";
-                echo "<form method='post' class='hds-ve-delete-form' onsubmit='return confirm(\"Delete this house work item?\");'>";
+                echo "<form method='post' action='" . htmlspecialchars($form_action, ENT_QUOTES, 'UTF-8') . "' class='hds-ve-delete-form' onsubmit='return confirm(\"Delete this house work entry?\");'>";
                 echo "<input type='hidden' name='house_work_id' value='$item_id'>";
                 echo "<input type='submit' name='delete_house_work' value='Delete' class='small-btn delete-btn'>";
                 echo "</form>";
@@ -115,14 +151,22 @@ function hds_render_house_work_type_select(string $name, string $selected = ''):
                 echo "</div>";
 
                 echo "<div data-view-edit-form hidden>";
-                echo "<form method='post' class='maintenance-form'>";
+                echo "<form method='post' action='" . htmlspecialchars($form_action, ENT_QUOTES, 'UTF-8') . "' class='maintenance-form perm-log-form'>";
                 echo "<input type='hidden' name='house_work_id' value='$item_id'>";
                 echo "<label>Type:</label><br>";
                 hds_render_house_work_type_select('house_work_type', $work_type);
                 echo "<br><br><label>Description:</label><br>";
                 echo "<input type='text' name='house_description' value=\"$description\" style='width:100%;' required><br><br>";
                 echo "<label>Date completed:</label> <input type='date' name='house_date_completed' value=\"" . htmlspecialchars($date_raw, ENT_QUOTES, 'UTF-8') . "\"><br><br>";
-                echo "<label>Contractor:</label> <input type='text' name='house_contractor' value=\"$contractor\" placeholder='Optional'><br><br>";
+                echo "<label>Contractor name:</label> <input type='text' name='house_contractor' value=\"$contractor\" placeholder='If applicable'><br><br>";
+                echo "<label>Completed by:</label><br>";
+                hds_render_permanent_completed_by_field('perm_log_completed_by', $completed_by);
+                hds_render_permanent_contractor_fields(
+                    $contractor_price,
+                    $payment_method,
+                    $payment_reference,
+                    $completed_by === 'contractor'
+                );
                 echo "<label>Notes:</label><br>";
                 echo "<textarea name='house_notes' rows='3' style='width:100%;'>$notes</textarea><br><br>";
                 echo "<div class='hds-ve-edit-actions'>";
@@ -141,8 +185,6 @@ function hds_render_house_work_type_select(string $name, string $selected = ''):
         }
         ?>
         </div>
-
-        <?php hds_render_permanent_maintenance_log($conn, $house_id, 'house_work'); ?>
     </div>
 </details>
 
@@ -155,7 +197,7 @@ function hds_render_house_work_type_select(string $name, string $selected = ''):
             <span class="media-rename-label">Current name:</span>
             <span id="houseRenameCurrent" class="media-rename-current"></span>
         </p>
-        <form method="post" id="houseRenameForm">
+        <form method="post" id="houseRenameForm" action="<?php echo htmlspecialchars($form_action, ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="house_image_id" id="houseRenameImageId" value="">
             <input type="hidden" name="house_work_id" id="houseRenameHouseWorkId" value="">
             <label for="houseRenameNew">New name:</label>

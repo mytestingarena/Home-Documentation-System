@@ -371,8 +371,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $contractor = mysqli_real_escape_string($conn, trim($_POST['house_contractor'] ?? ''));
         $notes = mysqli_real_escape_string($conn, trim($_POST['house_notes'] ?? ''));
         $date_sql = $date_completed !== '' ? "'$date_completed'" : 'NULL';
-        $conn->query("INSERT INTO house_work_items (house_id, work_type, description, date_completed, contractor, notes)
-                      VALUES ($house_id, '$work_type', '$description', $date_sql, '$contractor', '$notes')");
+        $contractor_meta = hds_permanent_log_parse_contractor_fields($_POST);
+        $completed_by = mysqli_real_escape_string($conn, $contractor_meta['completed_by']);
+        $price_sql = $contractor_meta['contractor_price'] !== null ? $contractor_meta['contractor_price'] : 'NULL';
+        $method_sql = $contractor_meta['payment_method'] !== null
+            ? "'" . mysqli_real_escape_string($conn, $contractor_meta['payment_method']) . "'"
+            : 'NULL';
+        $ref_sql = $contractor_meta['payment_reference'] !== null
+            ? "'" . mysqli_real_escape_string($conn, $contractor_meta['payment_reference']) . "'"
+            : 'NULL';
+        $conn->query("INSERT INTO house_work_items (house_id, work_type, description, date_completed, contractor, completed_by, contractor_price, payment_method, payment_reference, notes)
+                      VALUES ($house_id, '$work_type', '$description', $date_sql, '$contractor', '$completed_by', $price_sql, $method_sql, $ref_sql, '$notes')");
         header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=house_work&saved=1');
         exit;
     }
@@ -388,10 +397,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $contractor = mysqli_real_escape_string($conn, trim($_POST['house_contractor'] ?? ''));
         $notes = mysqli_real_escape_string($conn, trim($_POST['house_notes'] ?? ''));
         $date_sql = $date_completed !== '' ? "'$date_completed'" : 'NULL';
+        $contractor_meta = hds_permanent_log_parse_contractor_fields($_POST);
+        $completed_by = mysqli_real_escape_string($conn, $contractor_meta['completed_by']);
+        $price_sql = $contractor_meta['contractor_price'] !== null ? $contractor_meta['contractor_price'] : 'NULL';
+        $method_sql = $contractor_meta['payment_method'] !== null
+            ? "'" . mysqli_real_escape_string($conn, $contractor_meta['payment_method']) . "'"
+            : 'NULL';
+        $ref_sql = $contractor_meta['payment_reference'] !== null
+            ? "'" . mysqli_real_escape_string($conn, $contractor_meta['payment_reference']) . "'"
+            : 'NULL';
         if ($house_work_id > 0) {
             $conn->query("UPDATE house_work_items
                           SET work_type='$work_type', description='$description', date_completed=$date_sql,
-                              contractor='$contractor', notes='$notes'
+                              contractor='$contractor', completed_by='$completed_by', contractor_price=$price_sql,
+                              payment_method=$method_sql, payment_reference=$ref_sql, notes='$notes'
                           WHERE id=$house_work_id AND house_id=$house_id");
         }
         header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=house_work&saved=1');
@@ -544,7 +563,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // PERMANENT ITEMS - MAINTENANCE LOG
-    $permanent_log_types = ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'house_work', 'breakers'];
+    $permanent_log_types = ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'breakers'];
 
     if (isset($_POST['add_permanent_log']) && !empty($_POST['perm_log_date'])) {
         $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
@@ -613,7 +632,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['upload_perm_log_image'])) {
         $log_id = intval($_POST['permanent_log_id'] ?? 0);
         $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
-        $owned = $log_id > 0 && in_array($type, ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'house_work', 'breakers'], true)
+        $owned = $log_id > 0 && in_array($type, ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'breakers'], true)
             ? $conn->query("SELECT id FROM permanent_maintenance_log WHERE id=$log_id AND house_id=$house_id AND item_type='$type' LIMIT 1")
             : null;
         $upload_errors = [];
@@ -683,7 +702,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $log_id = intval($_POST['permanent_log_id'] ?? 0);
         $image_id = intval($_POST['perm_log_image_id'] ?? 0);
         $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
-        if ($log_id > 0 && $image_id > 0 && in_array($type, ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'house_work', 'breakers'], true)) {
+        if ($log_id > 0 && $image_id > 0 && in_array($type, ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'breakers'], true)) {
             $result = $conn->query(
                 "SELECT i.filename
                  FROM permanent_maintenance_log_images i
@@ -708,7 +727,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
         $new_basename_raw = trim($_POST['perm_log_image_basename'] ?? '');
 
-        if ($log_id > 0 && $image_id > 0 && $new_basename_raw !== '' && in_array($type, ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'house_work', 'breakers'], true)) {
+        if ($log_id > 0 && $image_id > 0 && $new_basename_raw !== '' && in_array($type, ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'breakers'], true)) {
             $result = $conn->query(
                 "SELECT i.filename
                  FROM permanent_maintenance_log_images i
@@ -1699,8 +1718,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260630a">
-    <script src="scripts.js?v=20260630a"></script>
+    <link rel="stylesheet" href="styles.css?v=20260630b">
+    <script src="scripts.js?v=20260630b"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>

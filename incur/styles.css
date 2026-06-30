@@ -791,6 +791,29 @@ h1 {
     border-bottom: 1px solid #e8e8e8;
 }
 
+.house-work-add-label {
+    width: 100%;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.house-work-add-block {
+    flex: 1 1 100%;
+    width: 100%;
+    margin: 8px 0 4px;
+    padding: 12px 0 4px;
+    border-top: 1px dashed #ddd;
+}
+
+.house-work-notes-input {
+    flex: 1 1 100%;
+    width: 100%;
+}
+
+.house-work-add-submit {
+    flex: 0 0 auto;
+}
+
 .house-work-add-form label {
     width: 100%;
     font-weight: 600;
