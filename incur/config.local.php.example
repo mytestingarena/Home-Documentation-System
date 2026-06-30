@@ -1,5 +1,5 @@
 <?php
-// Copy to config.local.php on the server (install.sh does this for you).
+// Copy to config.local.php on the server and set your local secrets.
 // config.local.php is NOT uploaded during deploys — it stays only on the server.
 
 $password = 'your_mysql_password_here';
