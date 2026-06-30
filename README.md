@@ -108,17 +108,66 @@ Tailor the app to each house.
 
 ## Quick install (recommended)
 
-From the repository root on your server:
+Tested on **Debian 13 (Trixie)** LXC or VM. Run as **root** inside an LXC; on a normal host the script can re-launch via `sudo`.
+
+### Full install (copy and run)
 
 ```bash
+cd ~
+rm -rf Home-Documentation-System
 git clone https://github.com/mytestingarena/Home-Documentation-System.git
 cd Home-Documentation-System
+git pull
+mysql -u root -e 'DROP DATABASE IF EXISTS `house_info`; CREATE DATABASE `house_info` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
 ./install.sh
 ```
 
-The installer asks for the web path, MySQL credentials, and WiFi/Admin tab passwords. It creates the database, imports `db/schema.sql` and `db/migrations.sql`, deploys `incur/` to your web root, writes `config.local.php`, and prepares upload directories.
+If `git` is not installed:
 
-On a normal host you may be prompted to re-run via `sudo`. Inside an LXC you are usually already root — answer **no** to sudo and run `./install.sh` directly.
+```bash
+apt-get update && apt-get install -y git
+```
+
+The `mysql` line clears any database left behind by a previous failed attempt. Deleting the clone folder alone does **not** remove the database.
+
+### What the installer does
+
+1. Checks for **PHP 8.x (mysqli)**, **Apache**, **MariaDB**, and **rsync**
+2. Offers to install missing packages via **apt** on Debian/Ubuntu (say **Y**)
+3. Prompts for web path, database name/user/password, and WiFi/Admin tab passwords
+4. Creates the database, imports `db/schema.sql` and `db/migrations.sql`
+5. Deploys `incur/` to `/var/www/html/incur/`
+6. Writes `config.local.php` and creates upload directories
+
+### Prompt cheat sheet
+
+| Prompt | Typical answer (LXC as root) |
+|--------|------------------------------|
+| Re-run with sudo? | **N** — you are already root |
+| Web install path | **Enter** — accept `/var/www/html/incur` |
+| Use socket authentication? | **Y** |
+| MySQL admin password required? | **N** — fresh MariaDB on LXC |
+| Generate random DB password? | **Y** (save the password shown) |
+| WiFi / Admin tab passwords | Type your chosen passwords |
+| Import water_schema.sql? | **N** unless you need it |
+| Install missing apt packages? | **Y** on a bare container |
+| Drop and recreate database? | **Y** if re-running after a failure |
+
+Press **Enter** at any prompt to accept the value shown in `[brackets]`. Do not type `y` unless the question is yes/no.
+
+### If install fails — start over
+
+```bash
+cd ~
+rm -rf Home-Documentation-System
+git clone https://github.com/mytestingarena/Home-Documentation-System.git
+cd Home-Documentation-System
+git pull
+mysql -u root -e 'DROP DATABASE IF EXISTS `house_info`; CREATE DATABASE `house_info` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
+./install.sh
+```
+
+The installer prints these same commands when a fatal error occurs.
 
 ## Manual setup
 

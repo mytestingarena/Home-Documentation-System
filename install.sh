@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # Interactive installer for Home Documentation System (HDS).
 #
-# Usage (from repository root):
+# Full install (see README.md):
+#   cd ~
+#   rm -rf Home-Documentation-System
+#   git clone https://github.com/mytestingarena/Home-Documentation-System.git
+#   cd Home-Documentation-System
+#   git pull
+#   mysql -u root -e 'DROP DATABASE IF EXISTS `house_info`; CREATE DATABASE `house_info` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
 #   ./install.sh
-#
-# On a normal host you may be prompted to re-run via sudo.
-# Inside an LXC you are usually already root — answer "no" to sudo.
 
 set -euo pipefail
 
@@ -26,6 +29,40 @@ UPLOAD_SUBDIRS=(photos receipts manuals designs outdoor-work house-work maintena
 
 die() { echo "Error: $*" >&2; exit 1; }
 warn() { echo "Warning: $*" >&2; }
+
+fatal_install() {
+    echo "Error: $1" >&2
+    print_start_over_instructions
+    exit 1
+}
+
+print_start_over_instructions() {
+    cat <<'INSTRUCTIONS'
+
+----------------------------------------------------------------------
+Start over from scratch (recommended after a failed install)
+----------------------------------------------------------------------
+
+  cd ~
+  rm -rf Home-Documentation-System
+  git clone https://github.com/mytestingarena/Home-Documentation-System.git
+  cd Home-Documentation-System
+  git pull
+  mysql -u root -e 'DROP DATABASE IF EXISTS `house_info`; CREATE DATABASE `house_info` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
+  ./install.sh
+
+Notes:
+  - Log in as root inside an LXC (no sudo needed).
+  - Deleting the clone folder does NOT remove the database — run the
+    mysql line above if a previous attempt failed partway through.
+  - At prompts, press Enter to accept the value in [brackets].
+  - Say Y to install missing apt packages when offered.
+  - Say N to "MySQL admin password required?" on a fresh LXC (socket auth).
+  - Say N to "Import optional db/water_schema.sql?" unless you need it.
+
+----------------------------------------------------------------------
+INSTRUCTIONS
+}
 
 PREREQ_MISSING=()
 PREREQ_INSTALL_APT=()
@@ -451,6 +488,29 @@ test_mysql_admin() {
     echo "  MySQL admin connection OK."
 }
 
+db_has_tables() {
+    local count
+    count="$(mysql_admin -N -e \
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${DB_NAME}';" \
+        2>/dev/null || echo 0)"
+    [[ "${count:-0}" -gt 0 ]]
+}
+
+maybe_reset_database() {
+    if ! db_has_tables; then
+        return 0
+    fi
+    echo ""
+    warn "Database '${DB_NAME}' already has tables (partial or previous install)."
+    if prompt_yes_no "Drop and recreate '${DB_NAME}' before importing schema?" "y"; then
+        mysql_admin -e "DROP DATABASE \`${DB_NAME}\`;"
+        mysql_admin -e "CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+        echo "  Database '${DB_NAME}' reset."
+    else
+        fatal_install "Cannot import into a non-empty database."
+    fi
+}
+
 setup_database() {
     echo ""
     echo "Creating database and MySQL user..."
@@ -464,16 +524,14 @@ setup_database() {
 }
 
 import_schema() {
+    maybe_reset_database
     echo ""
     echo "Importing database schema..."
     if ! mysql_app "$DB_NAME" < "$DB_DIR/schema.sql"; then
-        echo ""
-        warn "Schema import failed. If a previous attempt left a partial database, reset it:"
-        echo "  mysql -u ${MYSQL_ADMIN_USER} -e 'DROP DATABASE \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'"
-        die "Schema import failed."
+        fatal_install "Schema import failed."
     fi
     if ! mysql_app "$DB_NAME" < "$DB_DIR/migrations.sql"; then
-        die "migrations.sql import failed."
+        fatal_install "migrations.sql import failed."
     fi
     echo "  Imported schema.sql and migrations.sql."
     if [[ "$IMPORT_WATER_SCHEMA" -eq 1 ]]; then
@@ -564,6 +622,8 @@ print_summary() {
 
 main() {
     ensure_root
+    echo ""
+    echo "Tip: see README.md for the full start-to-finish install commands."
     check_prerequisites
     collect_prompts
     test_mysql_admin
