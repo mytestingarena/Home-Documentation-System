@@ -98,6 +98,7 @@ document.addEventListener("DOMContentLoaded", function() {
   initMediaRenameModal();
   initOutdoorRenameModal();
   initHouseRenameModal();
+  initPermLogRenameModal();
   initViewEdit();
   initPermanentLogContractorFields();
 });
@@ -463,6 +464,79 @@ function initHouseRenameModal() {
       return;
     }
     var openBtn = evt.target.closest(".house-rename-open");
+    if (openBtn) {
+      openRenameModal(openBtn);
+    }
+  });
+
+  document.addEventListener("keydown", function(evt) {
+    if (modal.hidden) return;
+    if (evt.key === "Escape") closeRenameModal();
+  });
+}
+
+
+function initPermLogRenameModal() {
+  var modal = document.getElementById("permLogRenameModal");
+  if (!modal) return;
+
+  if (modal.parentElement && modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  var currentEl = document.getElementById("permLogRenameCurrent");
+  var imageIdEl = document.getElementById("permLogRenameImageId");
+  var logIdEl = document.getElementById("permLogRenameLogId");
+  var itemTypeEl = document.getElementById("permLogRenameItemType");
+  var newNameEl = document.getElementById("permLogRenameNew");
+  var extEl = document.getElementById("permLogRenameExt");
+
+  function splitFilename(filename) {
+    var lastDot = filename.lastIndexOf(".");
+    if (lastDot <= 0) {
+      return { base: filename, ext: "" };
+    }
+    return {
+      base: filename.substring(0, lastDot),
+      ext: filename.substring(lastDot)
+    };
+  }
+
+  function openRenameModal(button) {
+    var filename = button.getAttribute("data-filename") || "";
+    var imageId = button.getAttribute("data-perm-log-image-id") || "";
+    var logId = button.getAttribute("data-perm-log-id") || "";
+    var itemType = button.getAttribute("data-item-type") || "";
+    var parts = splitFilename(filename);
+    if (currentEl) currentEl.textContent = filename;
+    if (imageIdEl) imageIdEl.value = imageId;
+    if (logIdEl) logIdEl.value = logId;
+    if (itemTypeEl) itemTypeEl.value = itemType;
+    if (extEl) extEl.textContent = parts.ext;
+    if (newNameEl) {
+      newNameEl.value = parts.base;
+      setTimeout(function() {
+        newNameEl.focus();
+        newNameEl.select();
+      }, 0);
+    }
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("media-rename-active");
+  }
+
+  function closeRenameModal() {
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("media-rename-active");
+  }
+
+  document.addEventListener("click", function(evt) {
+    if (evt.target.closest("[data-perm-log-rename-close]")) {
+      closeRenameModal();
+      return;
+    }
+    var openBtn = evt.target.closest(".perm-log-rename-open");
     if (openBtn) {
       openRenameModal(openBtn);
     }

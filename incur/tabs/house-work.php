@@ -38,7 +38,9 @@ function hds_house_work_type_label(string $type): string
 function hds_render_house_work_type_select(string $name, string $selected = ''): void
 {
     echo "<select name='$name' required>";
-    echo "<option value='' disabled" . ($selected === '' ? ' selected' : '') . ">Select type...</option>";
+    if ($selected === '') {
+        echo "<option value=''>Select type...</option>";
+    }
     foreach (hds_house_work_types() as $value => $label) {
         $sel = $value === $selected ? ' selected' : '';
         $label_esc = htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
@@ -56,7 +58,7 @@ function hds_render_house_work_type_select(string $name, string $selected = ''):
     </summary>
 
     <div class="collapsible-body">
-        <form method="post" class="house-work-add-form">
+        <form method="post" action="house.php?id=<?php echo (int)$house_id; ?>&tab=permanent" class="house-work-add-form">
             <label>Add house work:</label><br>
             <?php hds_render_house_work_type_select('house_work_type'); ?>
             <input type="text" name="house_description" placeholder="Description (e.g. Foundation crack repair, east wall)" required>

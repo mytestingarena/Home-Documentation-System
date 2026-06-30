@@ -35,6 +35,22 @@ if (!empty($_SESSION['house_photo_error'])) {
     echo "<p class='media-error'>" . htmlspecialchars($_SESSION['house_photo_error'], ENT_QUOTES, 'UTF-8') . "</p>";
     unset($_SESSION['house_photo_error']);
 }
+if (!empty($_SESSION['house_work_error'])) {
+    echo "<p class='media-error'>" . htmlspecialchars($_SESSION['house_work_error'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['house_work_error']);
+}
+if (!empty($_SESSION['perm_log_error'])) {
+    echo "<p class='media-error'>" . htmlspecialchars($_SESSION['perm_log_error'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['perm_log_error']);
+}
+if (!empty($_SESSION['perm_log_photo_success'])) {
+    echo "<p class='media-success'>" . htmlspecialchars($_SESSION['perm_log_photo_success'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['perm_log_photo_success']);
+}
+if (!empty($_SESSION['perm_log_photo_error'])) {
+    echo "<p class='media-error'>" . htmlspecialchars($_SESSION['perm_log_photo_error'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['perm_log_photo_error']);
+}
 ?>
 
 <div class="collapsible-list-toolbar">

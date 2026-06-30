@@ -14,6 +14,7 @@ if (!defined('ADMIN_TAB_PASSWORD')) {
 require_once __DIR__ . '/includes/ui-settings.php';
 require_once __DIR__ . '/includes/view-edit.php';
 require_once __DIR__ . '/includes/permanent-maintenance-log.php';
+require_once __DIR__ . '/includes/permanent-log-images.php';
 require_once __DIR__ . '/includes/outdoor-work-images.php';
 require_once __DIR__ . '/includes/house-work-images.php';
 require_once __DIR__ . '/includes/homelab.php';
@@ -351,13 +352,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // HOUSE WORK
     $house_work_types = ['foundation', 'basement', 'framing', 'waterproofing', 'insulation', 'drywall', 'flooring', 'plumbing', 'electrical', 'hvac', 'windows_doors', 'kitchen_bath', 'painting', 'mold', 'other'];
 
-    if (isset($_POST['add_house_work']) && !empty(trim($_POST['house_description'] ?? ''))) {
-        $work_type = $_POST['house_work_type'] ?? 'other';
-        if (!in_array($work_type, $house_work_types, true)) {
-            $work_type = 'other';
+    if (isset($_POST['add_house_work'])) {
+        $description_raw = trim($_POST['house_description'] ?? '');
+        $work_type = $_POST['house_work_type'] ?? '';
+        if ($description_raw === '') {
+            $_SESSION['house_work_error'] = 'Please enter a description.';
+            header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=house_work');
+            exit;
+        }
+        if ($work_type === '' || !in_array($work_type, $house_work_types, true)) {
+            $_SESSION['house_work_error'] = 'Please select a work type.';
+            header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=house_work');
+            exit;
         }
         $work_type = mysqli_real_escape_string($conn, $work_type);
-        $description = mysqli_real_escape_string($conn, trim($_POST['house_description']));
+        $description = mysqli_real_escape_string($conn, $description_raw);
         $date_completed = mysqli_real_escape_string($conn, $_POST['house_date_completed'] ?? '');
         $contractor = mysqli_real_escape_string($conn, trim($_POST['house_contractor'] ?? ''));
         $notes = mysqli_real_escape_string($conn, trim($_POST['house_notes'] ?? ''));
@@ -551,10 +560,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $ref_sql = $contractor['payment_reference'] !== null
             ? "'" . mysqli_real_escape_string($conn, $contractor['payment_reference']) . "'"
             : 'NULL';
-        if (in_array($type, $permanent_log_types, true)) {
-            $conn->query("INSERT INTO permanent_maintenance_log
-                          (house_id, item_type, log_date, part_number, completed_by, contractor_price, payment_method, payment_reference, notes)
-                          VALUES ($house_id, '$type', '$log_date', '$part_number', '$completed_by', $price_sql, $method_sql, $ref_sql, '$log_notes')");
+        if (!in_array($type, $permanent_log_types, true)) {
+            $_SESSION['perm_log_error'] = 'Invalid section for maintenance log.';
+            header('Location: house.php?id=' . $house_id . '&tab=permanent&saved=1');
+            exit;
+        }
+        $insert_ok = $conn->query("INSERT INTO permanent_maintenance_log
+                      (house_id, item_type, log_date, part_number, completed_by, contractor_price, payment_method, payment_reference, notes)
+                      VALUES ($house_id, '$type', '$log_date', '$part_number', '$completed_by', $price_sql, $method_sql, $ref_sql, '$log_notes')");
+        if (!$insert_ok) {
+            $_SESSION['perm_log_error'] = 'Could not save log entry. ' . $conn->error;
         }
         header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=' . urlencode($type) . '&saved=1');
         exit;
@@ -589,6 +604,147 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
         if ($log_id > 0 && in_array($type, $permanent_log_types, true)) {
             $conn->query("DELETE FROM permanent_maintenance_log WHERE id=$log_id AND house_id=$house_id AND item_type='$type'");
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=' . urlencode($type) . '&saved=1');
+        exit;
+    }
+
+
+    if (isset($_POST['upload_perm_log_image'])) {
+        $log_id = intval($_POST['permanent_log_id'] ?? 0);
+        $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
+        $owned = $log_id > 0 && in_array($type, ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'house_work', 'breakers'], true)
+            ? $conn->query("SELECT id FROM permanent_maintenance_log WHERE id=$log_id AND house_id=$house_id AND item_type='$type' LIMIT 1")
+            : null;
+        $upload_errors = [];
+        $upload_count = 0;
+
+        if (!$owned || $owned->num_rows === 0) {
+            $upload_errors[] = 'Log entry not found.';
+        } else {
+            $dir_error = hds_perm_log_ensure_upload_dir();
+            if ($dir_error !== null) {
+                $upload_errors[] = $dir_error;
+            } elseif (empty($_FILES['perm_log_images']['name']) || !is_array($_FILES['perm_log_images']['name'])) {
+                $upload_errors[] = 'No photo file was selected.';
+            } else {
+                $target_dir = hds_perm_log_upload_dir();
+                $allowed = hds_perm_log_allowed_extensions();
+                $max = 10;
+                foreach ($_FILES['perm_log_images']['tmp_name'] as $k => $tmp) {
+                    if ($upload_count >= $max) {
+                        break;
+                    }
+                    $original_name = basename((string)($_FILES['perm_log_images']['name'][$k] ?? ''));
+                    $upload_err = (int)($_FILES['perm_log_images']['error'][$k] ?? UPLOAD_ERR_NO_FILE);
+                    if ($upload_err !== UPLOAD_ERR_OK) {
+                        if ($original_name !== '') {
+                            $upload_errors[] = $original_name . ': upload failed (error code ' . $upload_err . ').';
+                        }
+                        continue;
+                    }
+                    $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
+                    if (!in_array($ext, $allowed, true)) {
+                        $upload_errors[] = $original_name . ': file type not allowed (use JPG, PNG, GIF, or WebP).';
+                        continue;
+                    }
+                    $final_name = time() . '_' . $log_id . '_' . preg_replace('/[^a-zA-Z0-9._\-]/', '_', $original_name);
+                    $target = $target_dir . $final_name;
+                    if (move_uploaded_file($tmp, $target)) {
+                        $safe_name = mysqli_real_escape_string($conn, $final_name);
+                        if ($conn->query("INSERT INTO permanent_maintenance_log_images (log_id, filename) VALUES ($log_id, '$safe_name')")) {
+                            $upload_count++;
+                        } else {
+                            @unlink($target);
+                            $upload_errors[] = $original_name . ': saved to disk but database insert failed.';
+                        }
+                    } else {
+                        $upload_errors[] = $original_name . ': could not save file (check folder permissions).';
+                    }
+                }
+            }
+        }
+
+        if ($upload_count > 0) {
+            $_SESSION['perm_log_photo_success'] = $upload_count === 1
+                ? '1 photo uploaded successfully.'
+                : $upload_count . ' photos uploaded successfully.';
+        }
+        if (!empty($upload_errors)) {
+            $_SESSION['perm_log_photo_error'] = implode(' ', $upload_errors);
+        } elseif ($upload_count === 0 && empty($_SESSION['perm_log_photo_success'])) {
+            $_SESSION['perm_log_photo_error'] = 'No photos were uploaded.';
+        }
+
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=' . urlencode($type) . '&saved=1');
+        exit;
+    }
+    if (isset($_POST['delete_perm_log_image'])) {
+        $log_id = intval($_POST['permanent_log_id'] ?? 0);
+        $image_id = intval($_POST['perm_log_image_id'] ?? 0);
+        $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
+        if ($log_id > 0 && $image_id > 0 && in_array($type, ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'house_work', 'breakers'], true)) {
+            $result = $conn->query(
+                "SELECT i.filename
+                 FROM permanent_maintenance_log_images i
+                 INNER JOIN permanent_maintenance_log l ON i.log_id = l.id
+                 WHERE i.id=$image_id AND i.log_id=$log_id AND l.house_id=$house_id AND l.item_type='$type'
+                 LIMIT 1"
+            );
+            if ($result && ($row = $result->fetch_assoc())) {
+                $path = hds_perm_log_upload_dir() . $row['filename'];
+                if (is_file($path)) {
+                    unlink($path);
+                }
+                $conn->query("DELETE FROM permanent_maintenance_log_images WHERE id=$image_id AND log_id=$log_id");
+            }
+        }
+        header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=' . urlencode($type) . '&saved=1');
+        exit;
+    }
+    if (isset($_POST['rename_perm_log_image'])) {
+        $log_id = intval($_POST['permanent_log_id'] ?? 0);
+        $image_id = intval($_POST['perm_log_image_id'] ?? 0);
+        $type = preg_replace('/[^a-z_]/', '', $_POST['item_type'] ?? '');
+        $new_basename_raw = trim($_POST['perm_log_image_basename'] ?? '');
+
+        if ($log_id > 0 && $image_id > 0 && $new_basename_raw !== '' && in_array($type, ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'house_work', 'breakers'], true)) {
+            $result = $conn->query(
+                "SELECT i.filename
+                 FROM permanent_maintenance_log_images i
+                 INNER JOIN permanent_maintenance_log l ON i.log_id = l.id
+                 WHERE i.id=$image_id AND i.log_id=$log_id AND l.house_id=$house_id AND l.item_type='$type'
+                 LIMIT 1"
+            );
+            if ($result && ($row = $result->fetch_assoc())) {
+                $old_filename = $row['filename'];
+                $old_ext = strtolower(pathinfo($old_filename, PATHINFO_EXTENSION));
+                $basename = hds_perm_log_sanitize_basename($new_basename_raw);
+                $new_name = ($old_ext !== '') ? $basename . '.' . $old_ext : $basename;
+
+                if ($basename === '') {
+                    $_SESSION['perm_log_photo_error'] = 'Please enter a valid file name.';
+                } elseif ($new_name !== $old_filename) {
+                    $dir = hds_perm_log_upload_dir();
+                    $old_path = $dir . $old_filename;
+                    $new_path = $dir . $new_name;
+                    if (file_exists($new_path)) {
+                        $_SESSION['perm_log_photo_error'] = 'A file with that name already exists.';
+                    } elseif (file_exists($old_path) && rename($old_path, $new_path)) {
+                        $safe_name = mysqli_real_escape_string($conn, $new_name);
+                        $conn->query("UPDATE permanent_maintenance_log_images SET filename='$safe_name' WHERE id=$image_id AND log_id=$log_id");
+                        $_SESSION['perm_log_photo_success'] = 'Photo renamed successfully.';
+                    } elseif (file_exists($old_path)) {
+                        $_SESSION['perm_log_photo_error'] = 'Could not rename the file on disk.';
+                    } else {
+                        $safe_name = mysqli_real_escape_string($conn, $new_name);
+                        $conn->query("UPDATE permanent_maintenance_log_images SET filename='$safe_name' WHERE id=$image_id AND log_id=$log_id");
+                        $_SESSION['perm_log_photo_success'] = 'Photo name updated.';
+                    }
+                }
+            }
+        } else {
+            $_SESSION['perm_log_photo_error'] = 'Please enter a new file name.';
         }
         header('Location: house.php?id=' . $house_id . '&tab=permanent&open_permanent=' . urlencode($type) . '&saved=1');
         exit;
@@ -1543,8 +1699,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260629c">
-    <script src="scripts.js?v=20260629c"></script>
+    <link rel="stylesheet" href="styles.css?v=20260630a">
+    <script src="scripts.js?v=20260630a"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
