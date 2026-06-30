@@ -13,25 +13,22 @@ function positionMobileMenu() {
     document.documentElement.style.setProperty("--hds-menu-top", bottom + "px");
   } else {
     document.documentElement.style.removeProperty("--hds-menu-top");
-    document.body.classList.remove("menu-open");
+    closeSidebar();
   }
 }
 
 function activateTab(tabName) {
-  var i, tabcontent, tablinks;
+  var i, tabcontent, navLinks;
 
   tabcontent = document.getElementsByClassName("tab");
   for (i = 0; i < tabcontent.length; i++) {
     tabcontent[i].style.display = "none";
   }
 
-  tablinks = document.getElementsByClassName("tablink");
-  for (i = 0; i < tablinks.length; i++) {
-    tablinks[i].className = tablinks[i].className.replace(" active", "");
-    var onclick = tablinks[i].getAttribute("onclick") || "";
-    if (onclick.indexOf("'" + tabName + "'") !== -1) {
-      tablinks[i].className += " active";
-    }
+  navLinks = document.querySelectorAll(".hds-nav-link");
+  for (i = 0; i < navLinks.length; i++) {
+    var linkTab = navLinks[i].getAttribute("data-tab");
+    navLinks[i].classList.toggle("active", linkTab === tabName);
   }
 
   var panel = document.getElementById(tabName);
@@ -50,20 +47,22 @@ function openTab(evt, tabName) {
     history.replaceState(null, "", "#" + tabName);
   }
 
-  var menu = document.getElementById("tabMenu");
-  if (menu) {
-    menu.classList.remove("active");
-    document.body.classList.remove("menu-open");
-  }
+  closeSidebar();
+}
+
+function closeSidebar() {
+  document.body.classList.remove("sidebar-open");
+  document.body.classList.remove("menu-open");
 }
 
 function toggleMenu() {
-  var menu = document.getElementById("tabMenu");
-  if (!menu) return;
+  if (!isMobileMenu()) {
+    return;
+  }
 
   positionMobileMenu();
-  menu.classList.toggle("active");
-  document.body.classList.toggle("menu-open", menu.classList.contains("active"));
+  document.body.classList.toggle("sidebar-open");
+  document.body.classList.toggle("menu-open", document.body.classList.contains("sidebar-open"));
 }
 
 function getInitialTab() {
@@ -82,6 +81,16 @@ function getInitialTab() {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
+  var menuToggle = document.querySelector(".menu-toggle");
+  if (menuToggle) {
+    menuToggle.addEventListener("keydown", function(evt) {
+      if (evt.key === "Enter" || evt.key === " ") {
+        evt.preventDefault();
+        toggleMenu();
+      }
+    });
+  }
+
   positionMobileMenu();
   activateTab(getInitialTab());
   scrollToOpenSection();

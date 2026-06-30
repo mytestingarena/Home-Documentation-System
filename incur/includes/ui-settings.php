@@ -1,6 +1,31 @@
 <?php
 // includes/ui-settings.php — Tab/section visibility registry and helpers (per house)
 
+function hds_ui_nav_groups(): array {
+    return [
+        'property' => [
+            'label' => 'Property',
+            'tabs' => ['permanent', 'utility', 'map', 'household'],
+        ],
+        'equipment' => [
+            'label' => 'Equipment',
+            'tabs' => ['tools', 'maintenance', 'homelab', 'contractors'],
+        ],
+        'media' => [
+            'label' => 'Media & Files',
+            'tabs' => ['media', 'manuals', 'designs'],
+        ],
+        'planning' => [
+            'label' => 'Planning',
+            'tabs' => ['projects'],
+        ],
+        'system' => [
+            'label' => 'System',
+            'tabs' => ['wifi', 'admin'],
+        ],
+    ];
+}
+
 function hds_ui_registry(): array {
     return [
         'tabs' => [
@@ -93,12 +118,67 @@ function hds_ui_section_enabled(string $section, array $settings): bool {
 }
 
 function hds_ui_first_enabled_tab(array $settings): string {
-    foreach (array_keys(hds_ui_registry()['tabs']) as $tab) {
-        if (hds_ui_tab_enabled($tab, $settings)) {
-            return $tab;
+    foreach (hds_ui_nav_groups() as $group) {
+        foreach ($group['tabs'] as $tab) {
+            if ($tab === 'admin') {
+                continue;
+            }
+            if (hds_ui_tab_enabled($tab, $settings)) {
+                return $tab;
+            }
         }
     }
     return 'permanent';
+}
+
+function hds_ui_render_sidebar_nav(string $active_tab, array $settings): void {
+    $registry = hds_ui_registry();
+    $tabs = $registry['tabs'];
+
+    echo '<nav class="hds-sidebar-nav" aria-label="House documentation sections">';
+    foreach (hds_ui_nav_groups() as $group_key => $group) {
+        $group_has_items = false;
+        ob_start();
+        foreach ($group['tabs'] as $tab_key) {
+            if ($tab_key === 'admin') {
+                $label = 'Admin';
+                $icon = 'fa-sliders';
+                $is_active = $active_tab === 'admin';
+                $extra_class = ' hds-nav-link--admin';
+            } else {
+                if (!hds_ui_tab_enabled($tab_key, $settings)) {
+                    continue;
+                }
+                if (!isset($tabs[$tab_key])) {
+                    continue;
+                }
+                $meta = $tabs[$tab_key];
+                $label = $meta['label'];
+                $icon = $meta['icon'];
+                $is_active = $active_tab === $tab_key;
+                $extra_class = '';
+            }
+            $group_has_items = true;
+            $active_class = $is_active ? ' active' : '';
+            $tab_esc = htmlspecialchars($tab_key, ENT_QUOTES, 'UTF-8');
+            $label_esc = htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
+            $icon_esc = htmlspecialchars($icon, ENT_QUOTES, 'UTF-8');
+            echo "<button type='button' class='hds-nav-link$extra_class$active_class' data-tab='$tab_esc' onclick='openTab(event, \"$tab_esc\")'>";
+            echo "<i class='fas $icon_esc' aria-hidden='true'></i>";
+            echo "<span>$label_esc</span>";
+            echo "</button>";
+        }
+        $group_html = ob_get_clean();
+        if (!$group_has_items) {
+            continue;
+        }
+        $group_label = htmlspecialchars($group['label'], ENT_QUOTES, 'UTF-8');
+        echo "<div class='hds-nav-group' data-nav-group='$group_key'>";
+        echo "<h3 class='hds-nav-group-label'>$group_label</h3>";
+        echo $group_html;
+        echo "</div>";
+    }
+    echo '</nav>';
 }
 
 function hds_ui_all_setting_keys(): array {

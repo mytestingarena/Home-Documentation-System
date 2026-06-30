@@ -16,6 +16,7 @@ require_once __DIR__ . '/includes/view-edit.php';
 require_once __DIR__ . '/includes/permanent-maintenance-log.php';
 require_once __DIR__ . '/includes/outdoor-work-images.php';
 require_once __DIR__ . '/includes/homelab.php';
+require_once __DIR__ . '/includes/sidebar-nav.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     @session_start();
@@ -1354,8 +1355,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260627l">
-    <script src="scripts.js?v=20260627h"></script>
+    <link rel="stylesheet" href="styles.css?v=20260629b">
+    <script src="scripts.js?v=20260629b"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -1372,19 +1373,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="header-footer">
             <a href="index.php" class="back-link">← Back to Houses</a>
         </div>
-
-        <nav class="tab-menu" id="tabMenu">
-            <?php foreach (hds_ui_registry()['tabs'] as $tab_key => $tab_meta): ?>
-                <?php if (!hds_ui_tab_enabled($tab_key, $hds_ui_settings)) continue; ?>
-                <button class="tablink <?php echo $active_tab === $tab_key ? 'active' : ''; ?>" onclick="openTab(event, '<?php echo htmlspecialchars($tab_key, ENT_QUOTES, 'UTF-8'); ?>')"><i class="fas <?php echo htmlspecialchars($tab_meta['icon'], ENT_QUOTES, 'UTF-8'); ?>"></i> <?php echo htmlspecialchars($tab_meta['label'], ENT_QUOTES, 'UTF-8'); ?></button>
-            <?php endforeach; ?>
-            <button class="tablink tablink--admin <?php echo $active_tab === 'admin' ? 'active' : ''; ?>" onclick="openTab(event, 'admin')"><i class="fas fa-sliders"></i> Admin</button>
-        </nav>
     </header>
 
-    <h1><?php echo $house_name; ?></h1>
+    <div class="hds-layout">
+        <?php hds_render_sidebar_shell($active_tab, $hds_ui_settings); ?>
 
-    <!-- Tab contents -->
+        <main class="hds-main">
+            <h1 class="hds-page-title"><?php echo $house_name; ?></h1>
+
+            <!-- Tab contents -->
     <?php foreach (hds_ui_registry()['tabs'] as $tab_key => $tab_meta): ?>
         <?php if (!hds_ui_tab_enabled($tab_key, $hds_ui_settings)) continue; ?>
         <div id="<?php echo htmlspecialchars($tab_key, ENT_QUOTES, 'UTF-8'); ?>" class="tab" style="display: <?php echo $active_tab === $tab_key ? 'block' : 'none'; ?>;">
@@ -1401,6 +1398,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <div id="admin" class="tab" style="display: <?php echo $active_tab === 'admin' ? 'block' : 'none'; ?>;">
         <?php include __DIR__ . '/tabs/admin.php'; ?>
+    </div>
+
+        </main>
     </div>
 
 </div>
