@@ -315,6 +315,13 @@ check_database_prereqs() {
 }
 
 check_tool_prereqs() {
+    if ! command -v git >/dev/null 2>&1; then
+        add_prereq_missing "git is not installed"
+        queue_apt_package "git"
+    else
+        echo "  git: OK"
+    fi
+
     if ! command -v rsync >/dev/null 2>&1; then
         add_prereq_missing "rsync is not installed"
         queue_apt_package "rsync"
@@ -413,6 +420,9 @@ check_prerequisites() {
 
     if ! command -v mysql >/dev/null 2>&1; then
         die "mysql client not available after prerequisite install."
+    fi
+    if ! command -v git >/dev/null 2>&1; then
+        die "git not available after prerequisite install."
     fi
     if ! command -v rsync >/dev/null 2>&1; then
         die "rsync not available after prerequisite install."

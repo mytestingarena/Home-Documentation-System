@@ -122,17 +122,19 @@ mysql -u root -e 'DROP DATABASE IF EXISTS `house_info`; CREATE DATABASE `house_i
 ./install.sh
 ```
 
-If `git` is not installed:
+On a completely bare container with no `git` yet, install it once before cloning:
 
 ```bash
 apt-get update && apt-get install -y git
 ```
 
+The installer also checks for `git` and can install it via apt if it is missing when you run `./install.sh`.
+
 The `mysql` line clears any database left behind by a previous failed attempt. Deleting the clone folder alone does **not** remove the database.
 
 ### What the installer does
 
-1. Checks for **PHP 8.x (mysqli)**, **Apache**, **MariaDB**, and **rsync**
+1. Checks for **git**, **PHP 8.x (mysqli)**, **Apache**, **MariaDB**, and **rsync**
 2. Offers to install missing packages via **apt** on Debian/Ubuntu (say **Y**)
 3. Prompts for web path, database name/user/password, and WiFi/Admin tab passwords
 4. Creates the database, imports `db/schema.sql` and `db/migrations.sql`
