@@ -97,6 +97,7 @@ document.addEventListener("DOMContentLoaded", function() {
   initMediaLightbox();
   initMediaRenameModal();
   initOutdoorRenameModal();
+  initHouseRenameModal();
   initViewEdit();
   initPermanentLogContractorFields();
 });
@@ -392,6 +393,76 @@ function initOutdoorRenameModal() {
       return;
     }
     var openBtn = evt.target.closest(".outdoor-rename-open");
+    if (openBtn) {
+      openRenameModal(openBtn);
+    }
+  });
+
+  document.addEventListener("keydown", function(evt) {
+    if (modal.hidden) return;
+    if (evt.key === "Escape") closeRenameModal();
+  });
+}
+
+
+function initHouseRenameModal() {
+  var modal = document.getElementById("houseRenameModal");
+  if (!modal) return;
+
+  if (modal.parentElement && modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  var currentEl = document.getElementById("houseRenameCurrent");
+  var imageIdEl = document.getElementById("houseRenameImageId");
+  var houseWorkIdEl = document.getElementById("houseRenameHouseWorkId");
+  var newNameEl = document.getElementById("houseRenameNew");
+  var extEl = document.getElementById("houseRenameExt");
+
+  function splitFilename(filename) {
+    var lastDot = filename.lastIndexOf(".");
+    if (lastDot <= 0) {
+      return { base: filename, ext: "" };
+    }
+    return {
+      base: filename.substring(0, lastDot),
+      ext: filename.substring(lastDot)
+    };
+  }
+
+  function openRenameModal(button) {
+    var filename = button.getAttribute("data-filename") || "";
+    var imageId = button.getAttribute("data-house-image-id") || "";
+    var houseWorkId = button.getAttribute("data-house-work-id") || "";
+    var parts = splitFilename(filename);
+    if (currentEl) currentEl.textContent = filename;
+    if (imageIdEl) imageIdEl.value = imageId;
+    if (houseWorkIdEl) houseWorkIdEl.value = houseWorkId;
+    if (extEl) extEl.textContent = parts.ext;
+    if (newNameEl) {
+      newNameEl.value = parts.base;
+      setTimeout(function() {
+        newNameEl.focus();
+        newNameEl.select();
+      }, 0);
+    }
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("media-rename-active");
+  }
+
+  function closeRenameModal() {
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("media-rename-active");
+  }
+
+  document.addEventListener("click", function(evt) {
+    if (evt.target.closest("[data-house-rename-close]")) {
+      closeRenameModal();
+      return;
+    }
+    var openBtn = evt.target.closest(".house-rename-open");
     if (openBtn) {
       openRenameModal(openBtn);
     }

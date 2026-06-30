@@ -52,6 +52,7 @@ function hds_ui_registry(): array {
                 'permanent-dryer'        => 'Dryer',
                 'permanent-ac'           => 'Air Conditioner',
                 'permanent-outdoor_work' => 'Outdoor Work',
+                'permanent-house_work'   => 'House Work',
                 'permanent-breakers'     => 'Breaker Panels',
             ],
             'utility' => [

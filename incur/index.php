@@ -95,6 +95,16 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
             }
         }
         @$conn->query("DELETE FROM outdoor_work_items WHERE house_id = $house_id");
+        $house_imgs = @$conn->query("SELECT i.filename FROM house_work_images i INNER JOIN house_work_items w ON i.house_work_id = w.id WHERE w.house_id = $house_id");
+        if ($house_imgs) {
+            while ($img = $house_imgs->fetch_assoc()) {
+                $path = 'uploads/house-work/' . $img['filename'];
+                if (file_exists($path)) {
+                    unlink($path);
+                }
+            }
+        }
+        @$conn->query("DELETE FROM house_work_items WHERE house_id = $house_id");
 
         $sql = "DELETE FROM houses WHERE id = $house_id";
         if ($conn->query($sql)) {

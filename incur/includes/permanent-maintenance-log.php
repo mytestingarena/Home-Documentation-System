@@ -3,7 +3,7 @@
 
 function hds_permanent_log_types(): array
 {
-    return ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'breakers'];
+    return ['furnace', 'water_heater', 'dishwasher', 'washer', 'dryer', 'ac', 'outdoor_work', 'house_work', 'breakers'];
 }
 
 function hds_permanent_log_completed_label(string $value): string
