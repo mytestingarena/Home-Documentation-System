@@ -118,15 +118,6 @@ CREATE TABLE IF NOT EXISTS breakers (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Home lab hardware
-CREATE TABLE IF NOT EXISTS permanent_maintenance_log_images (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    log_id INT NOT NULL,
-    filename VARCHAR(255) NOT NULL,
-    upload_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (log_id) REFERENCES permanent_maintenance_log(id) ON DELETE CASCADE,
-    INDEX idx_perm_log_images (log_id, upload_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS homelab_hardware (
     id INT AUTO_INCREMENT PRIMARY KEY,
     house_id INT NOT NULL,
@@ -425,6 +416,15 @@ CREATE TABLE IF NOT EXISTS permanent_maintenance_log (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (house_id) REFERENCES houses(id) ON DELETE CASCADE,
     INDEX idx_permanent_log (house_id, item_type, log_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS permanent_maintenance_log_images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    log_id INT NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    upload_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (log_id) REFERENCES permanent_maintenance_log(id) ON DELETE CASCADE,
+    INDEX idx_perm_log_images (log_id, upload_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS house_ui_settings (

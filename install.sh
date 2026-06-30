@@ -466,8 +466,15 @@ setup_database() {
 import_schema() {
     echo ""
     echo "Importing database schema..."
-    mysql_app "$DB_NAME" < "$DB_DIR/schema.sql"
-    mysql_app "$DB_NAME" < "$DB_DIR/migrations.sql"
+    if ! mysql_app "$DB_NAME" < "$DB_DIR/schema.sql"; then
+        echo ""
+        warn "Schema import failed. If a previous attempt left a partial database, reset it:"
+        echo "  mysql -u ${MYSQL_ADMIN_USER} -e 'DROP DATABASE \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'"
+        die "Schema import failed."
+    fi
+    if ! mysql_app "$DB_NAME" < "$DB_DIR/migrations.sql"; then
+        die "migrations.sql import failed."
+    fi
     echo "  Imported schema.sql and migrations.sql."
     if [[ "$IMPORT_WATER_SCHEMA" -eq 1 ]]; then
         mysql_app "$DB_NAME" < "$DB_DIR/water_schema.sql"
