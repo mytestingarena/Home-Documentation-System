@@ -21,6 +21,8 @@ This repository contains **application source only** — no user uploads, house 
 
 HDS supports **multiple houses** (primary home, cabin, rental) from a single install, with per-house tabs and sections you can show or hide in Admin.
 
+**Navigation:** On desktop, a sticky left sidebar groups tabs into Property, Equipment, Media & Files, Planning, and System. On mobile, tap the menu icon to open the same grouped list as a slide-out drawer.
+
 ---
 
 ## What you can document — by tab
