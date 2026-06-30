@@ -180,37 +180,55 @@ queue_apt_package() {
     PREREQ_INSTALL_APT+=("$pkg")
 }
 
+detect_php_version() {
+    if command -v php >/dev/null 2>&1; then
+        php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || true
+        return 0
+    fi
+    if command -v apt-cache >/dev/null 2>&1; then
+        apt-cache show php 2>/dev/null | awk -F': ' '/^Version:/{print $2; exit}' \
+            | grep -oE '[0-9]+\.[0-9]+' | head -1
+        return 0
+    fi
+    return 1
+}
+
+queue_php_mysql_package() {
+    local php_version="${1:-}"
+    if [[ -z "$php_version" ]]; then
+        php_version="$(detect_php_version || true)"
+    fi
+    if [[ -n "$php_version" ]] && command -v apt-cache >/dev/null 2>&1 \
+        && apt-cache show "php${php_version}-mysql" >/dev/null 2>&1; then
+        queue_apt_package "php${php_version}-mysql"
+    elif command -v apt-cache >/dev/null 2>&1 && apt-cache show php-mysql >/dev/null 2>&1; then
+        queue_apt_package "php-mysql"
+    else
+        queue_apt_package "php-mysqli"
+    fi
+}
+
 check_php_prereqs() {
     if ! command -v php >/dev/null 2>&1; then
         add_prereq_missing "PHP is not installed"
         queue_apt_package "php"
         queue_apt_package "libapache2-mod-php"
+        queue_php_mysql_package
         return 1
     fi
 
     local php_version
-    php_version="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || true)"
+    php_version="$(detect_php_version || true)"
     if [[ -n "$php_version" ]]; then
-        local major
-        major="$(php -r 'echo PHP_MAJOR_VERSION;' 2>/dev/null || echo 0)"
+        local major="${php_version%%.*}"
         if [[ "$major" -lt 8 ]]; then
             warn "PHP ${php_version} found; PHP 8.x is recommended."
         fi
     fi
 
     if ! php_mysqli_ok; then
-        add_prereq_missing "PHP mysqli extension is not enabled"
-        if command -v apt-cache >/dev/null 2>&1; then
-            if apt-cache show "php${php_version}-mysql" >/dev/null 2>&1; then
-                queue_apt_package "php${php_version}-mysql"
-            elif apt-cache show php-mysql >/dev/null 2>&1; then
-                queue_apt_package "php-mysql"
-            else
-                queue_apt_package "php-mysqli"
-            fi
-        else
-            queue_apt_package "php-mysql"
-        fi
+        add_prereq_missing "PHP mysqli extension is not enabled (install php-mysql)"
+        queue_php_mysql_package "$php_version"
         if ! pkg_installed libapache2-mod-php && ! pkg_installed "php${php_version}-apache2"; then
             queue_apt_package "libapache2-mod-php"
         fi
@@ -292,48 +310,64 @@ install_prerequisites_apt() {
             systemctl enable --now "$svc" 2>/dev/null || true
         fi
     done
+
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl reload apache2 2>/dev/null || systemctl reload httpd 2>/dev/null || true
+    fi
+}
+
+run_prereq_checks() {
+    PREREQ_MISSING=()
+    PREREQ_INSTALL_APT=()
+    check_tool_prereqs
+    check_php_prereqs || true
+    check_web_server_prereqs || true
+    check_database_prereqs || true
+}
+
+print_prereq_missing() {
+    local item
+    echo ""
+    echo "Missing requirements:"
+    for item in "${PREREQ_MISSING[@]}"; do
+        echo "  - $item"
+    done
 }
 
 check_prerequisites() {
     echo ""
     echo "Checking required software..."
 
-    PREREQ_MISSING=()
-    PREREQ_INSTALL_APT=()
-
     check_repo_files
-    check_tool_prereqs
-    check_php_prereqs || true
-    check_web_server_prereqs || true
-    check_database_prereqs || true
+    run_prereq_checks
 
     if [[ "${#PREREQ_MISSING[@]}" -eq 0 ]]; then
         echo "  All required software is present."
         return 0
     fi
 
-    echo ""
-    echo "Missing requirements:"
-    local item
-    for item in "${PREREQ_MISSING[@]}"; do
-        echo "  - $item"
-    done
+    print_prereq_missing
 
-    if [[ "${#PREREQ_INSTALL_APT[@]}" -gt 0 ]] && command -v apt-get >/dev/null 2>&1; then
+    local install_round=0
+    while [[ "${#PREREQ_MISSING[@]}" -gt 0 && "${#PREREQ_INSTALL_APT[@]}" -gt 0 ]] \
+        && command -v apt-get >/dev/null 2>&1; do
         echo ""
         echo "Suggested apt packages: ${PREREQ_INSTALL_APT[*]}"
-        if prompt_yes_no "Install missing packages now with apt-get?" "y"; then
-            install_prerequisites_apt
-            echo ""
-            echo "Re-checking requirements..."
-            PREREQ_MISSING=()
-            PREREQ_INSTALL_APT=()
-            check_tool_prereqs
-            check_php_prereqs || true
-            check_web_server_prereqs || true
-            check_database_prereqs || true
+        if ! prompt_yes_no "Install missing packages now with apt-get?" "y"; then
+            break
         fi
-    fi
+        install_prerequisites_apt
+        install_round=$((install_round + 1))
+        echo ""
+        echo "Re-checking requirements..."
+        run_prereq_checks
+        if [[ "${#PREREQ_MISSING[@]}" -eq 0 ]]; then
+            echo "  All required software is present."
+            return 0
+        fi
+        print_prereq_missing
+        [[ "$install_round" -ge 2 ]] && break
+    done
 
     if [[ "${#PREREQ_MISSING[@]}" -gt 0 ]]; then
         echo ""
@@ -347,7 +381,7 @@ check_prerequisites() {
         die "rsync not available after prerequisite install."
     fi
     if ! php_mysqli_ok; then
-        die "PHP mysqli extension is still not available. Install php-mysql (or php*-mysql) and retry."
+        die "PHP mysqli extension is still not available. Install php-mysql (or php8.4-mysql) and retry."
     fi
 }
 
