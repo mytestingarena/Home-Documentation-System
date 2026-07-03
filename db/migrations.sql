@@ -295,6 +295,8 @@ CREATE TABLE IF NOT EXISTS contractors (
     trade VARCHAR(255) DEFAULT NULL,
     phone VARCHAR(50) DEFAULT NULL,
     city VARCHAR(100) DEFAULT NULL,
+    grok_recommendation TINYINT(1) NOT NULL DEFAULT 0,
+    notes TEXT DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (house_id) REFERENCES houses(id) ON DELETE CASCADE,
     INDEX idx_contractors_house (house_id, name)
@@ -348,3 +350,7 @@ ALTER TABLE house_work_items
     ADD COLUMN IF NOT EXISTS contractor_price DECIMAL(10,2) DEFAULT NULL AFTER completed_by,
     ADD COLUMN IF NOT EXISTS payment_method ENUM('debit', 'cc', 'check', 'cash') DEFAULT NULL AFTER contractor_price,
     ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(100) DEFAULT NULL AFTER payment_method;
+
+ALTER TABLE contractors
+    ADD COLUMN IF NOT EXISTS grok_recommendation TINYINT(1) NOT NULL DEFAULT 0 AFTER city,
+    ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT NULL AFTER grok_recommendation;

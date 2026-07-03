@@ -19,7 +19,7 @@ incur/uploads/house-work/*
 incur/uploads/maintenance-log/*
 !incur/uploads/maintenance-log/.gitkeep
 
-# Database dumps and backups (keep db/*.sql for install.sh)
+# Database dumps and backups (keep db/*.sql schema files)
 *.sql
 !db/
 !db/*.sql

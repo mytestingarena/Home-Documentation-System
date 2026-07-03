@@ -31,6 +31,16 @@ global $conn, $house_id;
                 <input type="submit" name="add_contractor" value="Add Contractor" class="small-btn">
             </div>
         </div>
+        <div class="contractor-form-extras">
+            <label class="contractor-checkbox">
+                <input type="checkbox" id="contractor_grok_new" name="contractor_grok_recommendation" value="1">
+                Grok recommendation
+            </label>
+            <div class="contractor-field contractor-field--notes">
+                <label for="contractor_notes_new">Notes</label>
+                <textarea id="contractor_notes_new" name="contractor_notes" rows="3" placeholder="Why you recommend them, scope of work, etc."></textarea>
+            </div>
+        </div>
     </form>
 </div>
 
@@ -44,13 +54,20 @@ if ($contractors && $contractors->num_rows > 0) {
         $trade = htmlspecialchars($row['trade'] ?? '', ENT_QUOTES, 'UTF-8');
         $phone = htmlspecialchars($row['phone'] ?? '', ENT_QUOTES, 'UTF-8');
         $city = htmlspecialchars($row['city'] ?? '', ENT_QUOTES, 'UTF-8');
+        $notes = htmlspecialchars($row['notes'] ?? '', ENT_QUOTES, 'UTF-8');
+        $grok_recommendation = !empty($row['grok_recommendation']);
         $title = $name !== '' ? $name : 'Contractor #' . $contractor_id;
 
         echo "<div class='section-card contractor-card'>";
         echo "<div data-view-edit class='hds-ve-block'>";
         echo "<div data-view-edit-view>";
         echo "<div class='hds-ve-header hds-ve-header--split'>";
+        echo "<div class='contractor-card-heading'>";
         echo "<strong class='contractor-card-title'>$title</strong>";
+        if ($grok_recommendation) {
+            echo "<span class='contractor-grok-badge'>Grok recommendation</span>";
+        }
+        echo "</div>";
         echo "<div class='hds-ve-actions'>";
         echo "<button type='button' class='small-btn' data-view-edit-open>Edit</button>";
         echo "<form method='post' class='hds-ve-delete-form' onsubmit='return confirm(\"Delete this contractor?\");'>";
@@ -63,6 +80,9 @@ if ($contractors && $contractors->num_rows > 0) {
         echo "<p class='hds-ve-field'><span class='hds-ve-label'>What they do:</span> " . hds_ve_display($row['trade'] ?? '') . "</p>";
         echo "<p class='hds-ve-field'><span class='hds-ve-label'>Phone:</span> " . hds_ve_display($row['phone'] ?? '') . "</p>";
         echo "<p class='hds-ve-field'><span class='hds-ve-label'>City:</span> " . hds_ve_display($row['city'] ?? '') . "</p>";
+        if (trim($row['notes'] ?? '') !== '') {
+            echo "<p class='hds-ve-field contractor-notes-field'><span class='hds-ve-label'>Notes:</span> " . nl2br(hds_ve_display($row['notes'] ?? '')) . "</p>";
+        }
         echo "</div>";
         echo "</div>";
 
@@ -74,6 +94,11 @@ if ($contractors && $contractors->num_rows > 0) {
         echo "<div class='contractor-field'><label>What they do</label><input type='text' name='contractor_trade' value=\"$trade\"></div>";
         echo "<div class='contractor-field'><label>Phone</label><input type='text' name='contractor_phone' value=\"$phone\"></div>";
         echo "<div class='contractor-field'><label>City</label><input type='text' name='contractor_city' value=\"$city\"></div>";
+        echo "</div>";
+        echo "<div class='contractor-form-extras'>";
+        $grok_checked = $grok_recommendation ? ' checked' : '';
+        echo "<label class='contractor-checkbox'><input type='checkbox' name='contractor_grok_recommendation' value='1'$grok_checked> Grok recommendation</label>";
+        echo "<div class='contractor-field contractor-field--notes'><label>Notes</label><textarea name='contractor_notes' rows='3'>$notes</textarea></div>";
         echo "</div>";
         echo "<div class='hds-ve-edit-actions'>";
         echo "<input type='submit' name='update_contractor' value='Save'>";

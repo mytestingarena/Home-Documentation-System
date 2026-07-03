@@ -968,8 +968,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $trade = mysqli_real_escape_string($conn, trim($_POST['contractor_trade'] ?? ''));
         $phone = mysqli_real_escape_string($conn, trim($_POST['contractor_phone'] ?? ''));
         $city  = mysqli_real_escape_string($conn, trim($_POST['contractor_city'] ?? ''));
-        $conn->query("INSERT INTO contractors (house_id, name, trade, phone, city)
-                      VALUES ($house_id, '$name', '$trade', '$phone', '$city')");
+        $notes = mysqli_real_escape_string($conn, trim($_POST['contractor_notes'] ?? ''));
+        $grok_recommendation = isset($_POST['contractor_grok_recommendation']) ? 1 : 0;
+        $conn->query("INSERT INTO contractors (house_id, name, trade, phone, city, grok_recommendation, notes)
+                      VALUES ($house_id, '$name', '$trade', '$phone', '$city', $grok_recommendation, '$notes')");
         house_redirect($house_id, 'contractors');
     }
     if (isset($_POST['update_contractor']) && !empty(trim($_POST['contractor_name'] ?? ''))) {
@@ -978,8 +980,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $trade = mysqli_real_escape_string($conn, trim($_POST['contractor_trade'] ?? ''));
         $phone = mysqli_real_escape_string($conn, trim($_POST['contractor_phone'] ?? ''));
         $city  = mysqli_real_escape_string($conn, trim($_POST['contractor_city'] ?? ''));
+        $notes = mysqli_real_escape_string($conn, trim($_POST['contractor_notes'] ?? ''));
+        $grok_recommendation = isset($_POST['contractor_grok_recommendation']) ? 1 : 0;
         if ($contractor_id > 0) {
-            $conn->query("UPDATE contractors SET name='$name', trade='$trade', phone='$phone', city='$city'
+            $conn->query("UPDATE contractors SET name='$name', trade='$trade', phone='$phone', city='$city',
+                          grok_recommendation=$grok_recommendation, notes='$notes'
                           WHERE id=$contractor_id AND house_id=$house_id");
         }
         house_redirect($house_id, 'contractors');
@@ -1718,7 +1723,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260630c">
+    <link rel="stylesheet" href="styles.css?v=20260630d">
     <script src="scripts.js?v=20260630c"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>

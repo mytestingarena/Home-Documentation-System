@@ -169,6 +169,8 @@ CREATE TABLE IF NOT EXISTS contractors (
     trade VARCHAR(255) DEFAULT NULL,
     phone VARCHAR(50) DEFAULT NULL,
     city VARCHAR(100) DEFAULT NULL,
+    grok_recommendation TINYINT(1) NOT NULL DEFAULT 0,
+    notes TEXT DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (house_id) REFERENCES houses(id) ON DELETE CASCADE,
     INDEX idx_contractors_house (house_id, name)
