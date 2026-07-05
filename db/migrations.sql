@@ -21,7 +21,7 @@ ALTER TABLE photos
 
 -- Household items: allow additional categories
 ALTER TABLE household_items
-    MODIFY COLUMN type ENUM('TV','Server','Other') DEFAULT 'TV';
+    MODIFY COLUMN type ENUM('TV','Server','Other','Internet') DEFAULT 'TV';
 
 -- Electric panels: ensure size column exists
 ALTER TABLE electric_panels
@@ -354,3 +354,9 @@ ALTER TABLE house_work_items
 ALTER TABLE contractors
     ADD COLUMN IF NOT EXISTS grok_recommendation TINYINT(1) NOT NULL DEFAULT 0 AFTER city,
     ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT NULL AFTER grok_recommendation;
+
+ALTER TABLE household_items
+    MODIFY COLUMN type ENUM('TV','Server','Other','Internet') DEFAULT 'TV',
+    ADD COLUMN IF NOT EXISTS isp_company VARCHAR(255) DEFAULT NULL AFTER sn,
+    ADD COLUMN IF NOT EXISTS modem_sn_pn VARCHAR(255) DEFAULT NULL AFTER isp_company,
+    ADD COLUMN IF NOT EXISTS expected_speeds VARCHAR(100) DEFAULT NULL AFTER modem_sn_pn;

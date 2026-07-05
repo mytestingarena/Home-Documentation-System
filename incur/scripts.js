@@ -165,6 +165,7 @@ document.addEventListener("DOMContentLoaded", function() {
   initPermLogRenameModal();
   initViewEdit();
   initPermanentLogContractorFields();
+  initHouseholdTypeFields();
 });
 
 
@@ -693,6 +694,60 @@ function initPermanentLogContractorFields() {
     var block = openBtn.closest("[data-view-edit]");
     if (!block) return;
     var form = block.querySelector(".perm-log-form");
+    if (form) {
+      setTimeout(function() {
+        updateForm(form);
+      }, 0);
+    }
+  });
+}
+
+function initHouseholdTypeFields() {
+  function updateForm(form) {
+    var typeSelect = form.querySelector("[data-household-type]");
+    var fixedType = form.getAttribute("data-household-type-fixed");
+    var type = fixedType || (typeSelect ? typeSelect.value : "TV");
+    var isInternet = type === "Internet";
+
+    var standard = form.querySelector("[data-household-standard]");
+    var internet = form.querySelector("[data-household-internet]");
+
+    if (standard) {
+      standard.hidden = isInternet;
+      var standardInputs = standard.querySelectorAll("input, select, textarea");
+      for (var i = 0; i < standardInputs.length; i++) {
+        standardInputs[i].disabled = isInternet;
+      }
+    }
+
+    if (internet) {
+      internet.hidden = !isInternet;
+      var internetInputs = internet.querySelectorAll("input, select, textarea");
+      for (var j = 0; j < internetInputs.length; j++) {
+        internetInputs[j].disabled = !isInternet;
+      }
+    }
+  }
+
+  var forms = document.querySelectorAll("[data-household-form]");
+  for (var f = 0; f < forms.length; f++) {
+    (function(form) {
+      updateForm(form);
+      var typeSelect = form.querySelector("[data-household-type]");
+      if (typeSelect) {
+        typeSelect.addEventListener("change", function() {
+          updateForm(form);
+        });
+      }
+    })(forms[f]);
+  }
+
+  document.addEventListener("click", function(evt) {
+    var openBtn = evt.target.closest("[data-view-edit-open]");
+    if (!openBtn) return;
+    var block = openBtn.closest("[data-view-edit]");
+    if (!block) return;
+    var form = block.querySelector("[data-household-form]");
     if (form) {
       setTimeout(function() {
         updateForm(form);

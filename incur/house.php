@@ -936,22 +936,48 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // HOUSEHOLD ITEMS
     if (isset($_POST['add_household'])) {
         $type  = mysqli_real_escape_string($conn, $_POST['type'] ?? 'TV');
-        $brand = mysqli_real_escape_string($conn, $_POST['brand'] ?? '');
-        $model = mysqli_real_escape_string($conn, $_POST['model'] ?? '');
-        $sn    = mysqli_real_escape_string($conn, $_POST['sn'] ?? '');
-        $notes = mysqli_real_escape_string($conn, $_POST['notes'] ?? '');
-        $conn->query("INSERT INTO household_items (house_id, type, brand, model, sn, notes)
-                      VALUES ($house_id, '$type', '$brand', '$model', '$sn', '$notes')");
+        $brand = mysqli_real_escape_string($conn, trim($_POST['brand'] ?? ''));
+        $model = mysqli_real_escape_string($conn, trim($_POST['model'] ?? ''));
+        $sn    = mysqli_real_escape_string($conn, trim($_POST['sn'] ?? ''));
+        $isp_company = mysqli_real_escape_string($conn, trim($_POST['household_isp_company'] ?? ''));
+        $modem_sn_pn = mysqli_real_escape_string($conn, trim($_POST['household_modem_sn_pn'] ?? ''));
+        $expected_speeds = mysqli_real_escape_string($conn, trim($_POST['household_expected_speeds'] ?? ''));
+        $notes = mysqli_real_escape_string($conn, trim($_POST['notes'] ?? ''));
+        if ($type === 'Internet') {
+            $brand = '';
+            $model = '';
+            $sn = '';
+        } else {
+            $isp_company = '';
+            $modem_sn_pn = '';
+            $expected_speeds = '';
+        }
+        $conn->query("INSERT INTO household_items (house_id, type, brand, model, sn, isp_company, modem_sn_pn, expected_speeds, notes)
+                      VALUES ($house_id, '$type', '$brand', '$model', '$sn', '$isp_company', '$modem_sn_pn', '$expected_speeds', '$notes')");
         house_redirect($house_id, 'household');
     }
 
     if (isset($_POST['update_household'])) {
         $item_id = intval($_POST['item_id'] ?? 0);
-        $brand   = mysqli_real_escape_string($conn, $_POST['brand'] ?? '');
-        $model   = mysqli_real_escape_string($conn, $_POST['model'] ?? '');
-        $sn      = mysqli_real_escape_string($conn, $_POST['sn'] ?? '');
-        $notes   = mysqli_real_escape_string($conn, $_POST['notes'] ?? '');
-        $conn->query("UPDATE household_items SET brand='$brand', model='$model', sn='$sn', notes='$notes'
+        $item_type = mysqli_real_escape_string($conn, $_POST['household_item_type'] ?? '');
+        $brand   = mysqli_real_escape_string($conn, trim($_POST['brand'] ?? ''));
+        $model   = mysqli_real_escape_string($conn, trim($_POST['model'] ?? ''));
+        $sn      = mysqli_real_escape_string($conn, trim($_POST['sn'] ?? ''));
+        $isp_company = mysqli_real_escape_string($conn, trim($_POST['household_isp_company'] ?? ''));
+        $modem_sn_pn = mysqli_real_escape_string($conn, trim($_POST['household_modem_sn_pn'] ?? ''));
+        $expected_speeds = mysqli_real_escape_string($conn, trim($_POST['household_expected_speeds'] ?? ''));
+        $notes   = mysqli_real_escape_string($conn, trim($_POST['notes'] ?? ''));
+        if ($item_type === 'Internet') {
+            $brand = '';
+            $model = '';
+            $sn = '';
+        } else {
+            $isp_company = '';
+            $modem_sn_pn = '';
+            $expected_speeds = '';
+        }
+        $conn->query("UPDATE household_items SET brand='$brand', model='$model', sn='$sn',
+                      isp_company='$isp_company', modem_sn_pn='$modem_sn_pn', expected_speeds='$expected_speeds', notes='$notes'
                       WHERE id=$item_id AND house_id=$house_id");
         house_redirect($house_id, 'household');
     }
@@ -1723,8 +1749,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260630d">
-    <script src="scripts.js?v=20260630c"></script>
+    <link rel="stylesheet" href="styles.css?v=20260703a">
+    <script src="scripts.js?v=20260703a"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>

@@ -2554,6 +2554,64 @@ body.media-rename-active {
     color: #2c3e50;
 }
 
+/* Household Items tab */
+.household-form-row {
+    margin-bottom: 14px;
+}
+
+.household-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 16px;
+    margin-bottom: 14px;
+}
+
+.household-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.household-field--full {
+    margin-bottom: 14px;
+}
+
+.household-label {
+    font-weight: 600;
+    font-size: 0.9em;
+    color: #555;
+}
+
+.household-field input[type="text"],
+.household-field select,
+.household-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+}
+
+.household-field textarea {
+    resize: vertical;
+    min-height: 72px;
+}
+
+.household-item-card {
+    margin-top: 20px;
+}
+
+.household-item-details .hds-ve-field {
+    margin: 0 0 6px;
+}
+
+@media (max-width: 768px) {
+    .household-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Home Lab tab */
 .homelab-intro {
     color: #555;

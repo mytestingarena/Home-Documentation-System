@@ -180,10 +180,13 @@ CREATE TABLE IF NOT EXISTS contractors (
 CREATE TABLE IF NOT EXISTS household_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     house_id INT NOT NULL,
-    type ENUM('TV', 'Server', 'Other') DEFAULT 'TV',
+    type ENUM('TV', 'Server', 'Other', 'Internet') DEFAULT 'TV',
     brand VARCHAR(100) DEFAULT NULL,
     model VARCHAR(100) DEFAULT NULL,
     sn VARCHAR(100) DEFAULT NULL,
+    isp_company VARCHAR(255) DEFAULT NULL,
+    modem_sn_pn VARCHAR(255) DEFAULT NULL,
+    expected_speeds VARCHAR(100) DEFAULT NULL,
     notes TEXT DEFAULT NULL,
     FOREIGN KEY (house_id) REFERENCES houses(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
