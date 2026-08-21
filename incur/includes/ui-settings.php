@@ -9,7 +9,7 @@ function hds_ui_nav_groups(): array {
         ],
         'equipment' => [
             'label' => 'Equipment',
-            'tabs' => ['tools', 'maintenance', 'homelab', 'contractors'],
+            'tabs' => ['tools', 'maintenance', 'homelab', 'firearms', 'contractors'],
         ],
         'media' => [
             'label' => 'Media & Files',
@@ -35,6 +35,7 @@ function hds_ui_registry(): array {
             'contractors' => ['label' => 'Contractors',       'icon' => 'fa-hard-hat'],
             'homelab'     => ['label' => 'Home Lab',          'icon' => 'fa-server'],
             'tools'       => ['label' => 'Tools',             'icon' => 'fa-toolbox'],
+            'firearms'    => ['label' => 'Firearms',          'icon' => 'fa-crosshairs'],
             'maintenance' => ['label' => 'Maintenance',       'icon' => 'fa-oil-can'],
             'media'       => ['label' => 'Media',             'icon' => 'fa-images'],
             'designs'     => ['label' => 'Designs',           'icon' => 'fa-drafting-compass'],

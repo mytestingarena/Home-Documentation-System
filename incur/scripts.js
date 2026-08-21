@@ -163,6 +163,7 @@ document.addEventListener("DOMContentLoaded", function() {
   initOutdoorRenameModal();
   initHouseRenameModal();
   initPermLogRenameModal();
+  initFirearmRenameModal();
   initViewEdit();
   initPermanentLogContractorFields();
   initHouseholdTypeFields();
@@ -189,7 +190,8 @@ function scrollToOpenSection() {
     ["open_utility", "utility-"],
     ["open_media", "media-"],
     ["open_permanent", "permanent-"],
-    ["open_homelab", "homelab-"]
+    ["open_homelab", "homelab-"],
+    ["open_firearm", "firearm-"]
   ];
 
   for (var i = 0; i < scrollKeys.length; i++) {
@@ -600,6 +602,75 @@ function initPermLogRenameModal() {
       return;
     }
     var openBtn = evt.target.closest(".perm-log-rename-open");
+    if (openBtn) {
+      openRenameModal(openBtn);
+    }
+  });
+
+  document.addEventListener("keydown", function(evt) {
+    if (modal.hidden) return;
+    if (evt.key === "Escape") closeRenameModal();
+  });
+}
+
+function initFirearmRenameModal() {
+  var modal = document.getElementById("firearmRenameModal");
+  if (!modal) return;
+
+  if (modal.parentElement && modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  var currentEl = document.getElementById("firearmRenameCurrent");
+  var imageIdEl = document.getElementById("firearmRenameImageId");
+  var firearmIdEl = document.getElementById("firearmRenameFirearmId");
+  var newNameEl = document.getElementById("firearmRenameNew");
+  var extEl = document.getElementById("firearmRenameExt");
+
+  function splitFilename(filename) {
+    var lastDot = filename.lastIndexOf(".");
+    if (lastDot <= 0) {
+      return { base: filename, ext: "" };
+    }
+    return {
+      base: filename.substring(0, lastDot),
+      ext: filename.substring(lastDot)
+    };
+  }
+
+  function openRenameModal(button) {
+    var filename = button.getAttribute("data-filename") || "";
+    var imageId = button.getAttribute("data-firearm-image-id") || "";
+    var firearmId = button.getAttribute("data-firearm-id") || "";
+    var parts = splitFilename(filename);
+    if (currentEl) currentEl.textContent = filename;
+    if (imageIdEl) imageIdEl.value = imageId;
+    if (firearmIdEl) firearmIdEl.value = firearmId;
+    if (extEl) extEl.textContent = parts.ext;
+    if (newNameEl) {
+      newNameEl.value = parts.base;
+      setTimeout(function() {
+        newNameEl.focus();
+        newNameEl.select();
+      }, 0);
+    }
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("media-rename-active");
+  }
+
+  function closeRenameModal() {
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("media-rename-active");
+  }
+
+  document.addEventListener("click", function(evt) {
+    if (evt.target.closest("[data-firearm-rename-close]")) {
+      closeRenameModal();
+      return;
+    }
+    var openBtn = evt.target.closest(".firearm-rename-open");
     if (openBtn) {
       openRenameModal(openBtn);
     }

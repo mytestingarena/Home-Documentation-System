@@ -18,6 +18,7 @@ require_once __DIR__ . '/includes/permanent-log-images.php';
 require_once __DIR__ . '/includes/outdoor-work-images.php';
 require_once __DIR__ . '/includes/house-work-images.php';
 require_once __DIR__ . '/includes/homelab.php';
+require_once __DIR__ . '/includes/firearms.php';
 require_once __DIR__ . '/includes/sidebar-nav.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -38,7 +39,7 @@ if ($result->num_rows == 0) {
 $house = $result->fetch_assoc();
 $house_name = htmlspecialchars($house['name'] ?? 'Unknown House');
 
-$valid_tabs = ['permanent', 'utility', 'household', 'contractors', 'homelab', 'tools', 'maintenance', 'media', 'designs', 'manuals', 'map', 'wifi', 'projects', 'admin'];
+$valid_tabs = ['permanent', 'utility', 'household', 'contractors', 'homelab', 'tools', 'firearms', 'maintenance', 'media', 'designs', 'manuals', 'map', 'wifi', 'projects', 'admin'];
 $hds_ui_settings = hds_ui_load_settings($conn, $house_id);
 $active_tab = $_GET['tab'] ?? 'permanent';
 if (!in_array($active_tab, $valid_tabs, true)) {
@@ -1197,6 +1198,170 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         house_redirect($house_id, 'tools');
     }
 
+    // FIREARMS
+    if (isset($_POST['add_firearm']) && !empty(trim($_POST['firearm_name'] ?? ''))) {
+        $f = hds_firearms_parse_post($conn);
+        $conn->query("INSERT INTO firearms
+                      (house_id, name, firearm_type, manufacturer, model, caliber, serial_number, barrel_length, action_type, finish, purchase_date, purchase_price, storage_location, notes)
+                      VALUES ($house_id, '{$f['name']}', '{$f['firearm_type']}', '{$f['manufacturer']}', '{$f['model']}', '{$f['caliber']}', '{$f['serial_number']}', '{$f['barrel_length']}', '{$f['action_type']}', '{$f['finish']}', {$f['purchase_date_sql']}, {$f['purchase_price_sql']}, '{$f['storage_location']}', '{$f['notes']}')");
+        house_redirect($house_id, 'firearms', (int)$conn->insert_id, 'open_firearm');
+    }
+    if (isset($_POST['update_firearm']) && !empty(trim($_POST['firearm_name'] ?? ''))) {
+        $firearm_id = intval($_POST['firearm_id'] ?? 0);
+        $f = hds_firearms_parse_post($conn);
+        if ($firearm_id > 0) {
+            $conn->query("UPDATE firearms SET
+                          name='{$f['name']}', firearm_type='{$f['firearm_type']}', manufacturer='{$f['manufacturer']}',
+                          model='{$f['model']}', caliber='{$f['caliber']}', serial_number='{$f['serial_number']}',
+                          barrel_length='{$f['barrel_length']}', action_type='{$f['action_type']}', finish='{$f['finish']}',
+                          purchase_date={$f['purchase_date_sql']}, purchase_price={$f['purchase_price_sql']},
+                          storage_location='{$f['storage_location']}', notes='{$f['notes']}'
+                          WHERE id=$firearm_id AND house_id=$house_id");
+        }
+        house_redirect($house_id, 'firearms', $firearm_id, 'open_firearm');
+    }
+    if (isset($_POST['delete_firearm'])) {
+        $firearm_id = intval($_POST['firearm_id'] ?? 0);
+        if ($firearm_id > 0) {
+            hds_firearms_delete_image_files($conn, $firearm_id, $house_id);
+            $conn->query("DELETE FROM firearms WHERE id=$firearm_id AND house_id=$house_id");
+        }
+        house_redirect($house_id, 'firearms');
+    }
+    if (isset($_POST['upload_firearm_image'])) {
+        $firearm_id = intval($_POST['firearm_id'] ?? 0);
+        $owned = $firearm_id > 0
+            ? $conn->query("SELECT id FROM firearms WHERE id=$firearm_id AND house_id=$house_id LIMIT 1")
+            : null;
+        $upload_errors = [];
+        $upload_count = 0;
+
+        if (!$owned || $owned->num_rows === 0) {
+            $upload_errors[] = 'Firearm record not found.';
+        } else {
+            $dir_error = hds_firearms_ensure_upload_dir();
+            if ($dir_error !== null) {
+                $upload_errors[] = $dir_error;
+            } elseif (empty($_FILES['firearm_images']['name']) || !is_array($_FILES['firearm_images']['name'])) {
+                $upload_errors[] = 'No photo file was selected.';
+            } else {
+                $target_dir = hds_firearms_upload_dir();
+                $allowed = hds_firearms_allowed_extensions();
+                $max = 10;
+                foreach ($_FILES['firearm_images']['tmp_name'] as $k => $tmp) {
+                    if ($upload_count >= $max) {
+                        break;
+                    }
+                    $original_name = basename((string)($_FILES['firearm_images']['name'][$k] ?? ''));
+                    $upload_err = (int)($_FILES['firearm_images']['error'][$k] ?? UPLOAD_ERR_NO_FILE);
+                    if ($upload_err !== UPLOAD_ERR_OK) {
+                        if ($original_name !== '') {
+                            $upload_errors[] = $original_name . ': upload failed (error code ' . $upload_err . ').';
+                        }
+                        continue;
+                    }
+                    $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
+                    if (!in_array($ext, $allowed, true)) {
+                        $upload_errors[] = $original_name . ': file type not allowed (use JPG, PNG, GIF, or WebP).';
+                        continue;
+                    }
+                    $final_name = time() . '_' . $firearm_id . '_' . preg_replace('/[^a-zA-Z0-9._\-]/', '_', $original_name);
+                    $target = $target_dir . $final_name;
+                    if (move_uploaded_file($tmp, $target)) {
+                        $safe_name = mysqli_real_escape_string($conn, $final_name);
+                        if ($conn->query("INSERT INTO firearm_images (firearm_id, filename) VALUES ($firearm_id, '$safe_name')")) {
+                            $upload_count++;
+                        } else {
+                            @unlink($target);
+                            $upload_errors[] = $original_name . ': saved to disk but database insert failed.';
+                        }
+                    } else {
+                        $upload_errors[] = $original_name . ': could not save file (check folder permissions).';
+                    }
+                }
+            }
+        }
+
+        if ($upload_count > 0) {
+            $_SESSION['firearm_photo_success'] = $upload_count === 1
+                ? '1 photo uploaded successfully.'
+                : $upload_count . ' photos uploaded successfully.';
+        }
+        if (!empty($upload_errors)) {
+            $_SESSION['firearm_photo_error'] = implode(' ', $upload_errors);
+        } elseif ($upload_count === 0 && empty($_SESSION['firearm_photo_success'])) {
+            $_SESSION['firearm_photo_error'] = 'No photos were uploaded.';
+        }
+
+        house_redirect($house_id, 'firearms', $firearm_id, 'open_firearm');
+    }
+    if (isset($_POST['delete_firearm_image'])) {
+        $firearm_id = intval($_POST['firearm_id'] ?? 0);
+        $image_id = intval($_POST['firearm_image_id'] ?? 0);
+        if ($firearm_id > 0 && $image_id > 0) {
+            $result = $conn->query(
+                "SELECT i.filename
+                 FROM firearm_images i
+                 INNER JOIN firearms f ON i.firearm_id = f.id
+                 WHERE i.id=$image_id AND i.firearm_id=$firearm_id AND f.house_id=$house_id
+                 LIMIT 1"
+            );
+            if ($result && ($row = $result->fetch_assoc())) {
+                $path = hds_firearms_upload_dir() . $row['filename'];
+                if (is_file($path)) {
+                    unlink($path);
+                }
+                $conn->query("DELETE FROM firearm_images WHERE id=$image_id AND firearm_id=$firearm_id");
+            }
+        }
+        house_redirect($house_id, 'firearms', $firearm_id, 'open_firearm');
+    }
+    if (isset($_POST['rename_firearm_image'])) {
+        $firearm_id = intval($_POST['firearm_id'] ?? 0);
+        $image_id = intval($_POST['firearm_image_id'] ?? 0);
+        $new_basename_raw = trim($_POST['firearm_image_basename'] ?? '');
+
+        if ($firearm_id > 0 && $image_id > 0 && $new_basename_raw !== '') {
+            $result = $conn->query(
+                "SELECT i.filename
+                 FROM firearm_images i
+                 INNER JOIN firearms f ON i.firearm_id = f.id
+                 WHERE i.id=$image_id AND i.firearm_id=$firearm_id AND f.house_id=$house_id
+                 LIMIT 1"
+            );
+            if ($result && ($row = $result->fetch_assoc())) {
+                $old_filename = $row['filename'];
+                $old_ext = strtolower(pathinfo($old_filename, PATHINFO_EXTENSION));
+                $basename = hds_firearms_sanitize_basename($new_basename_raw);
+                $new_name = ($old_ext !== '') ? $basename . '.' . $old_ext : $basename;
+
+                if ($basename === '') {
+                    $_SESSION['firearm_photo_error'] = 'Please enter a valid file name.';
+                } elseif ($new_name !== $old_filename) {
+                    $dir = hds_firearms_upload_dir();
+                    $old_path = $dir . $old_filename;
+                    $new_path = $dir . $new_name;
+                    if (file_exists($new_path)) {
+                        $_SESSION['firearm_photo_error'] = 'A file with that name already exists.';
+                    } elseif (file_exists($old_path) && rename($old_path, $new_path)) {
+                        $safe_name = mysqli_real_escape_string($conn, $new_name);
+                        $conn->query("UPDATE firearm_images SET filename='$safe_name' WHERE id=$image_id AND firearm_id=$firearm_id");
+                        $_SESSION['firearm_photo_success'] = 'Photo renamed successfully.';
+                    } elseif (file_exists($old_path)) {
+                        $_SESSION['firearm_photo_error'] = 'Could not rename the file on disk.';
+                    } else {
+                        $safe_name = mysqli_real_escape_string($conn, $new_name);
+                        $conn->query("UPDATE firearm_images SET filename='$safe_name' WHERE id=$image_id AND firearm_id=$firearm_id");
+                        $_SESSION['firearm_photo_success'] = 'Photo name updated.';
+                    }
+                }
+            }
+        } else {
+            $_SESSION['firearm_photo_error'] = 'Please enter a new file name.';
+        }
+        house_redirect($house_id, 'firearms', $firearm_id, 'open_firearm');
+    }
+
     // MAINTENANCE EQUIPMENT
     $maint_categories = ['atv', 'boat', 'lawnmower', 'other'];
     if (isset($_POST['add_equipment']) && !empty(trim($_POST['equipment_name'] ?? ''))) {
@@ -1749,8 +1914,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260703a">
-    <script src="scripts.js?v=20260703a"></script>
+    <link rel="stylesheet" href="styles.css?v=20260821a">
+    <script src="scripts.js?v=20260821a"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>

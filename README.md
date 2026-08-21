@@ -53,6 +53,13 @@ Inventory of tools kept at each property.
 
 - **Tool name, power type** (battery, AC, pneumatic, manual), description, and which house it belongs to
 
+### Firearms
+Private inventory of firearms kept at each property.
+
+- **Type, manufacturer, model, caliber/gauge, serial number, barrel length, action, finish**
+- **Purchase date and price, storage location, notes**
+- **Photo uploads** with lightbox, rename, and delete
+
 ### Maintenance
 Service history for equipment that is not a built-in appliance.
 

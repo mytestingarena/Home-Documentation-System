@@ -16,6 +16,19 @@ if (isset($_POST['add_house']) && !empty(trim($_POST['house_name']))) {
 }
 
 // Handle DELETE house
+$export_message = '';
+if (isset($_GET['export_error'])) {
+    $export_errors = [
+        'confirm' => 'Export cancelled — you must type confirm exactly.',
+        'house' => 'Export failed — house not found.',
+        'format' => 'Export failed — choose spreadsheet or PDF.',
+    ];
+    $code = $_GET['export_error'];
+    if (isset($export_errors[$code])) {
+        $export_message = "<p class='export-error-msg'>" . htmlspecialchars($export_errors[$code], ENT_QUOTES, 'UTF-8') . "</p>";
+    }
+}
+
 $delete_message = '';
 if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['confirm_delete'])) {
     $confirm = strtolower(trim($_POST['confirm_delete']));
@@ -105,6 +118,16 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
             }
         }
         @$conn->query("DELETE FROM house_work_items WHERE house_id = $house_id");
+        $firearm_imgs = @$conn->query("SELECT i.filename FROM firearm_images i INNER JOIN firearms f ON i.firearm_id = f.id WHERE f.house_id = $house_id");
+        if ($firearm_imgs) {
+            while ($img = $firearm_imgs->fetch_assoc()) {
+                $path = 'uploads/firearms/' . $img['filename'];
+                if (file_exists($path)) {
+                    unlink($path);
+                }
+            }
+        }
+        @$conn->query("DELETE FROM firearms WHERE house_id = $house_id");
         $perm_log_imgs = @$conn->query("SELECT i.filename FROM permanent_maintenance_log_images i INNER JOIN permanent_maintenance_log l ON i.log_id = l.id WHERE l.house_id = $house_id");
         if ($perm_log_imgs) {
             while ($img = $perm_log_imgs->fetch_assoc()) {
@@ -151,6 +174,7 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
 
     <?php
     if ($add_message) echo $add_message;
+    if ($export_message) echo $export_message;
     if ($delete_message) echo $delete_message;
     ?>
 
@@ -175,7 +199,19 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
                 $name = htmlspecialchars($row['name']);
                 echo "<div class='house-card'>";
                 echo "<h2>$name</h2>";
-                echo "<p><a href='house.php?id=$id' style='color:#3498db; text-decoration:none; font-weight:bold;'>View Details</a></p>";
+                echo "<p class='house-card-link'><a href='house.php?id=$id'>View Details</a></p>";
+
+                echo "<form method='post' action='export-house.php' class='house-export-form'>";
+                echo "<input type='hidden' name='house_id' value='$id'>";
+                echo "<p class='house-export-label'>Export for realtor handoff</p>";
+                echo "<p class='house-export-hint'>Print the PDF or share the Excel workbook when listing the home.</p>";
+                echo "<div class='house-export-format'>";
+                echo "<label class='house-export-choice'><input type='radio' name='export_format' value='spreadsheet' checked> Spreadsheet workbook (.xlsx)</label>";
+                echo "<label class='house-export-choice'><input type='radio' name='export_format' value='pdf'> Printable PDF summary</label>";
+                echo "</div>";
+                echo "<input type='text' name='export_confirm' class='house-export-confirm' placeholder='Type confirm to export' autocomplete='off'>";
+                echo "<input type='submit' name='export_house' value='Export Data' class='house-export-btn'>";
+                echo "</form>";
 
                 // Delete form with confirmation
                 echo "<form method='post' style='margin-top:15px;'>";

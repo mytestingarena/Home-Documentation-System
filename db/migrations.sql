@@ -345,6 +345,36 @@ CREATE TABLE IF NOT EXISTS permanent_maintenance_log_images (
 ALTER TABLE permanent_maintenance_log
     MODIFY COLUMN payment_method ENUM('debit', 'cc', 'check', 'cash') DEFAULT NULL;
 
+CREATE TABLE IF NOT EXISTS firearms (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    house_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    firearm_type VARCHAR(30) NOT NULL DEFAULT 'other',
+    manufacturer VARCHAR(100) DEFAULT NULL,
+    model VARCHAR(100) DEFAULT NULL,
+    caliber VARCHAR(50) DEFAULT NULL,
+    serial_number VARCHAR(128) DEFAULT NULL,
+    barrel_length VARCHAR(50) DEFAULT NULL,
+    action_type VARCHAR(30) DEFAULT NULL,
+    finish VARCHAR(100) DEFAULT NULL,
+    purchase_date DATE DEFAULT NULL,
+    purchase_price DECIMAL(10,2) DEFAULT NULL,
+    storage_location VARCHAR(255) DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (house_id) REFERENCES houses(id) ON DELETE CASCADE,
+    INDEX idx_firearms_house (house_id, name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS firearm_images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    firearm_id INT NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    upload_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (firearm_id) REFERENCES firearms(id) ON DELETE CASCADE,
+    INDEX idx_firearm_images (firearm_id, upload_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 ALTER TABLE house_work_items
     ADD COLUMN IF NOT EXISTS completed_by ENUM('homeowner', 'contractor') NOT NULL DEFAULT 'homeowner' AFTER contractor,
     ADD COLUMN IF NOT EXISTS contractor_price DECIMAL(10,2) DEFAULT NULL AFTER completed_by,

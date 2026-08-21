@@ -18,6 +18,8 @@ incur/uploads/house-work/*
 !incur/uploads/house-work/.gitkeep
 incur/uploads/maintenance-log/*
 !incur/uploads/maintenance-log/.gitkeep
+incur/uploads/firearms/*
+!incur/uploads/firearms/.gitkeep
 
 # Database dumps and backups (keep db/*.sql schema files)
 *.sql
