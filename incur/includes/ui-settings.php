@@ -13,7 +13,7 @@ function hds_ui_nav_groups(): array {
         ],
         'media' => [
             'label' => 'Media & Files',
-            'tabs' => ['media', 'outdoor-photos', 'manuals', 'designs'],
+            'tabs' => ['media', 'manuals', 'designs'],
         ],
         'planning' => [
             'label' => 'Planning',
@@ -37,9 +37,8 @@ function hds_ui_registry(): array {
             'tools'       => ['label' => 'Tools',             'icon' => 'fa-toolbox'],
             'firearms'    => ['label' => 'Firearms',          'icon' => 'fa-crosshairs'],
             'maintenance' => ['label' => 'Maintenance',       'icon' => 'fa-oil-can'],
-            'media'            => ['label' => 'Media',             'icon' => 'fa-images'],
-            'outdoor-photos'   => ['label' => 'Outdoor Photos',    'icon' => 'fa-camera'],
-            'designs'          => ['label' => 'Designs',           'icon' => 'fa-drafting-compass'],
+            'media'       => ['label' => 'Media',             'icon' => 'fa-images'],
+            'designs'     => ['label' => 'Designs',           'icon' => 'fa-drafting-compass'],
             'manuals'     => ['label' => 'User Manuals',    'icon' => 'fa-book'],
             'map'         => ['label' => 'Map Location',      'icon' => 'fa-map-marker-alt'],
             'wifi'        => ['label' => 'WiFi',              'icon' => 'fa-wifi'],
@@ -69,10 +68,6 @@ function hds_ui_registry(): array {
                 'media-exterior'    => 'Regular Exterior Photos',
                 'media-ir-interior' => 'IR Interior Scans',
                 'media-ir-exterior' => 'IR Exterior Scans',
-            ],
-            'outdoor-photos' => [
-                'outdoor-photos-trail'   => 'Trail Camera',
-                'outdoor-photos-fishing' => 'Fishing',
             ],
             'map' => [
                 'map-property' => 'Property Details & Map',

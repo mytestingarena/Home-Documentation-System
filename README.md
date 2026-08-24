@@ -72,14 +72,6 @@ Visual record of the property.
 - **Site walkthrough videos** — compressed MP4 upload with sync for on-disk files
 - **IR interior and exterior scans** — thermal images kept separate from regular photos
 
-### Outdoor Photos
-Trail camera and fishing pictures, kept apart from house media.
-
-- **Trail Camera and Fishing sections** — upload stills into either album
-- **Sorted by when the picture was taken** — date comes from photo metadata (EXIF), then the file name, then upload time
-- **Timeline by year, month, and day** — lightbox view, optional note, GPS map link when the photo has coordinates
-- **Thumbnails generated on upload** so large game-cam dumps stay browseable
-
 ### Designs
 Plans and drawings for reference or renovation.
 

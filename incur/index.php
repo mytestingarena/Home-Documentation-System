@@ -41,8 +41,6 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
             'designs'     => 'uploads/designs/',
             'user_manuals'=> 'uploads/manuals/',
         ];
-        require_once __DIR__ . '/includes/outdoor-photos.php';
-        hds_outdoor_photos_delete_house_files($conn, $house_id);
         foreach ($file_tables as $table => $dir) {
             $rows = $conn->query("SELECT filename FROM $table WHERE house_id = $house_id");
             if ($rows) {
@@ -159,7 +157,7 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home Documentation System - Houses</title>
-    <link rel="stylesheet" href="styles.css?v=20260823a">
+    <link rel="stylesheet" href="styles.css?v=20260823b">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
