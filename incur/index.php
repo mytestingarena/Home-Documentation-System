@@ -41,6 +41,8 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
             'designs'     => 'uploads/designs/',
             'user_manuals'=> 'uploads/manuals/',
         ];
+        require_once __DIR__ . '/includes/outdoor-photos.php';
+        hds_outdoor_photos_delete_house_files($conn, $house_id);
         foreach ($file_tables as $table => $dir) {
             $rows = $conn->query("SELECT filename FROM $table WHERE house_id = $house_id");
             if ($rows) {
@@ -157,7 +159,7 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home Documentation System - Houses</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260823a">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
@@ -178,42 +180,65 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
     if ($delete_message) echo $delete_message;
     ?>
 
-    <!-- Add New House Form -->
-    <div class="section-card" style="margin-bottom:30px; max-width:500px; margin-left:auto; margin-right:auto;">
-        <h3>Add New House</h3>
-        <form method="post">
-            <input type="text" name="house_name" placeholder="House name (e.g. Main House, Lake Cabin)" required style="width:100%; padding:12px; margin-bottom:10px; border-radius:6px; border:1px solid #ccc;">
-            <input type="submit" name="add_house" value="Add House" style="background:#3498db; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; width:100%;">
-        </form>
+    <?php
+    $houses = [];
+    $houses_result = $conn->query("SELECT id, name FROM houses ORDER BY name ASC, id ASC");
+    if ($houses_result) {
+        while ($row = $houses_result->fetch_assoc()) {
+            $houses[] = $row;
+        }
+    }
+    ?>
+
+    <div class="houses-admin-row">
+        <div class="section-card houses-admin-card">
+            <h3>Add New House</h3>
+            <form method="post">
+                <input type="text" name="house_name" placeholder="House name (e.g. Main House, Lake Cabin)" required style="width:100%; padding:12px; margin-bottom:10px; border-radius:6px; border:1px solid #ccc;">
+                <input type="submit" name="add_house" value="Add House" style="background:#3498db; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; width:100%;">
+            </form>
+        </div>
+
+        <div class="section-card houses-admin-card">
+            <h3>Export House Data</h3>
+            <p class="house-export-hint">Choose a house first, then pick a format for realtor handoff.</p>
+            <?php if (count($houses) > 0): ?>
+            <form method="post" action="export-house.php" class="house-export-form" id="houseExportForm">
+                <label class="house-export-label" for="export_house_id">House</label>
+                <select name="house_id" id="export_house_id" class="house-export-select" required>
+                    <option value="">Select a house...</option>
+                    <?php foreach ($houses as $house): ?>
+                        <option value="<?php echo (int)$house['id']; ?>"><?php echo htmlspecialchars($house['name'], ENT_QUOTES, 'UTF-8'); ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <div class="house-export-options" id="houseExportOptions" hidden>
+                    <p class="house-export-label">Format</p>
+                    <div class="house-export-format">
+                        <label class="house-export-choice"><input type="radio" name="export_format" value="spreadsheet" checked> Spreadsheet workbook (.xlsx)</label>
+                        <label class="house-export-choice"><input type="radio" name="export_format" value="pdf"> Printable PDF summary</label>
+                    </div>
+                    <input type="text" name="export_confirm" class="house-export-confirm" placeholder="Type confirm to export" autocomplete="off">
+                    <input type="submit" name="export_house" value="Export Data" class="house-export-btn">
+                </div>
+            </form>
+            <?php else: ?>
+            <p class="empty-note">Add a house above before exporting.</p>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- Houses Grid -->
     <div class="houses-grid">
         <?php
-        $sql = "SELECT id, name FROM houses ORDER BY id";
-        $result = $conn->query($sql);
-
-        if ($result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $id = $row['id'];
-                $name = htmlspecialchars($row['name']);
+        if (count($houses) > 0) {
+            foreach ($houses as $row) {
+                $id = (int)$row['id'];
+                $name = htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8');
                 echo "<div class='house-card'>";
                 echo "<h2>$name</h2>";
                 echo "<p class='house-card-link'><a href='house.php?id=$id'>View Details</a></p>";
 
-                echo "<form method='post' action='export-house.php' class='house-export-form'>";
-                echo "<input type='hidden' name='house_id' value='$id'>";
-                echo "<p class='house-export-label'>Export for realtor handoff</p>";
-                echo "<p class='house-export-hint'>Print the PDF or share the Excel workbook when listing the home.</p>";
-                echo "<div class='house-export-format'>";
-                echo "<label class='house-export-choice'><input type='radio' name='export_format' value='spreadsheet' checked> Spreadsheet workbook (.xlsx)</label>";
-                echo "<label class='house-export-choice'><input type='radio' name='export_format' value='pdf'> Printable PDF summary</label>";
-                echo "</div>";
-                echo "<input type='text' name='export_confirm' class='house-export-confirm' placeholder='Type confirm to export' autocomplete='off'>";
-                echo "<input type='submit' name='export_house' value='Export Data' class='house-export-btn'>";
-                echo "</form>";
-
-                // Delete form with confirmation
                 echo "<form method='post' style='margin-top:15px;'>";
                 echo "<input type='hidden' name='house_id' value='$id'>";
                 echo "<input type='text' name='confirm_delete' placeholder='Type \"approve\" to delete' style='width:100%; padding:8px; margin-bottom:8px; border-radius:6px; border:1px solid #ccc;'>";
@@ -229,5 +254,17 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
 
 </div>
 <?php include __DIR__ . '/includes/site-footer.php'; ?>
+<script>
+(function() {
+  var select = document.getElementById("export_house_id");
+  var options = document.getElementById("houseExportOptions");
+  if (!select || !options) return;
+  function toggleExportOptions() {
+    options.hidden = !select.value;
+  }
+  select.addEventListener("change", toggleExportOptions);
+  toggleExportOptions();
+})();
+</script>
 </body>
 </html>

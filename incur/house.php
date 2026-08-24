@@ -20,6 +20,7 @@ require_once __DIR__ . '/includes/house-work-images.php';
 require_once __DIR__ . '/includes/homelab.php';
 require_once __DIR__ . '/includes/firearms.php';
 require_once __DIR__ . '/includes/sidebar-nav.php';
+require_once __DIR__ . '/includes/outdoor-photos.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     @session_start();
@@ -39,7 +40,7 @@ if ($result->num_rows == 0) {
 $house = $result->fetch_assoc();
 $house_name = htmlspecialchars($house['name'] ?? 'Unknown House');
 
-$valid_tabs = ['permanent', 'utility', 'household', 'contractors', 'homelab', 'tools', 'firearms', 'maintenance', 'media', 'designs', 'manuals', 'map', 'wifi', 'projects', 'admin'];
+$valid_tabs = ['permanent', 'utility', 'household', 'contractors', 'homelab', 'tools', 'firearms', 'maintenance', 'media', 'outdoor-photos', 'designs', 'manuals', 'map', 'wifi', 'projects', 'admin'];
 $hds_ui_settings = hds_ui_load_settings($conn, $house_id);
 $active_tab = $_GET['tab'] ?? 'permanent';
 if (!in_array($active_tab, $valid_tabs, true)) {
@@ -65,7 +66,7 @@ function house_redirect(int $house_id, string $tab = 'permanent', $open_section 
 // Upload limits
 ini_set('upload_max_filesize', '128M');
 ini_set('post_max_size', '256M');
-ini_set('max_file_uploads', '20');
+ini_set('max_file_uploads', '80');
 
 // POST handling – redirect to CURRENT URL after any change
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -1674,6 +1675,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         house_redirect($house_id, 'media', $open_media, 'open_media');
     }
 
+    // OUTDOOR PHOTOS UPLOAD
+    if (isset($_POST['upload_outdoor_photos'])) {
+        include __DIR__ . '/tabs/outdoor-photos-upload.php';
+        hds_outdoor_photos_redirect($house_id, false);
+    }
+
+    // OUTDOOR PHOTOS DELETE
+    if (isset($_POST['delete_outdoor_photo'])) {
+        $photo_id = intval($_POST['outdoor_photo_id'] ?? 0);
+        hds_outdoor_photos_delete($conn, $house_id, $photo_id);
+        hds_outdoor_photos_redirect($house_id, true);
+    }
+
+    // OUTDOOR PHOTOS SAVE NOTE / DATE
+    if (isset($_POST['save_outdoor_photo'])) {
+        $photo_id = intval($_POST['outdoor_photo_id'] ?? 0);
+        $caption = (string) ($_POST['outdoor_caption'] ?? '');
+        $taken_at = (string) ($_POST['outdoor_taken_at'] ?? '');
+        hds_outdoor_photos_update_meta($conn, $house_id, $photo_id, $caption, $taken_at);
+        hds_outdoor_photos_redirect($house_id, true);
+    }
+
     // USER MANUALS UPLOAD
     if (isset($_POST['upload_manuals']) && !empty($_FILES['manuals']['name'][0])) {
         $target_dir = "uploads/manuals/";
@@ -1914,8 +1937,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260821a">
-    <script src="scripts.js?v=20260821a"></script>
+    <link rel="stylesheet" href="styles.css?v=20260823a">
+    <script src="scripts.js?v=20260823a"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>

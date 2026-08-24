@@ -217,11 +217,17 @@ function scrollToOpenSection() {
 }
 
 function initMediaLightbox() {
-  var lightbox = document.getElementById("mediaLightbox");
-  if (!lightbox) return;
+  var lightboxes = document.querySelectorAll(".media-lightbox");
+  if (!lightboxes.length) return;
 
+  var lightbox = lightboxes[0];
   if (lightbox.parentElement && lightbox.parentElement !== document.body) {
     document.body.appendChild(lightbox);
+  }
+  for (var extra = 1; extra < lightboxes.length; extra++) {
+    if (lightboxes[extra] !== lightbox) {
+      lightboxes[extra].remove();
+    }
   }
 
   var imageEl = lightbox.querySelector(".media-lightbox-image");
@@ -232,10 +238,14 @@ function initMediaLightbox() {
   var currentGallery = [];
   var currentIndex = 0;
 
-  function allLightboxItems() {
-    var mediaTab = document.getElementById("media");
-    if (!mediaTab) return [];
-    return Array.prototype.slice.call(mediaTab.querySelectorAll(".media-lightbox-trigger"));
+  function allLightboxItems(trigger) {
+    if (trigger) {
+      var scoped = trigger.closest(".tab") || trigger.closest("[data-lightbox-gallery]");
+      if (scoped) {
+        return Array.prototype.slice.call(scoped.querySelectorAll(".media-lightbox-trigger"));
+      }
+    }
+    return Array.prototype.slice.call(document.querySelectorAll(".media-lightbox-trigger"));
   }
 
   function renderSlide() {
@@ -258,7 +268,7 @@ function initMediaLightbox() {
     if (gallery) {
       currentGallery = Array.prototype.slice.call(gallery.querySelectorAll(".media-lightbox-trigger"));
     } else {
-      currentGallery = allLightboxItems();
+      currentGallery = allLightboxItems(trigger);
     }
     currentIndex = currentGallery.indexOf(trigger);
     if (currentIndex < 0) currentIndex = 0;

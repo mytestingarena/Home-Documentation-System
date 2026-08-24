@@ -390,3 +390,26 @@ ALTER TABLE household_items
     ADD COLUMN IF NOT EXISTS isp_company VARCHAR(255) DEFAULT NULL AFTER sn,
     ADD COLUMN IF NOT EXISTS modem_sn_pn VARCHAR(255) DEFAULT NULL AFTER isp_company,
     ADD COLUMN IF NOT EXISTS expected_speeds VARCHAR(100) DEFAULT NULL AFTER modem_sn_pn;
+
+CREATE TABLE IF NOT EXISTS outdoor_photos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    house_id INT NOT NULL,
+    album ENUM('trail_camera', 'fishing') NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    original_name VARCHAR(255) NOT NULL DEFAULT '',
+    thumbnail VARCHAR(255) DEFAULT NULL,
+    taken_at DATETIME DEFAULT NULL,
+    date_source ENUM('exif', 'filename', 'upload', 'manual') NOT NULL DEFAULT 'upload',
+    camera_make VARCHAR(100) DEFAULT NULL,
+    camera_model VARCHAR(100) DEFAULT NULL,
+    gps_lat DECIMAL(10,7) DEFAULT NULL,
+    gps_lng DECIMAL(10,7) DEFAULT NULL,
+    caption VARCHAR(500) DEFAULT NULL,
+    width INT DEFAULT NULL,
+    height INT DEFAULT NULL,
+    file_size INT DEFAULT NULL,
+    upload_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (house_id) REFERENCES houses(id) ON DELETE CASCADE,
+    INDEX idx_outdoor_photos_album (house_id, album, taken_at),
+    INDEX idx_outdoor_photos_taken (house_id, taken_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

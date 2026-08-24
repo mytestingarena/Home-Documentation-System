@@ -20,6 +20,11 @@ incur/uploads/maintenance-log/*
 !incur/uploads/maintenance-log/.gitkeep
 incur/uploads/firearms/*
 !incur/uploads/firearms/.gitkeep
+incur/uploads/outdoor-photos/*
+!incur/uploads/outdoor-photos/.gitkeep
+!incur/uploads/outdoor-photos/thumbs/
+incur/uploads/outdoor-photos/thumbs/*
+!incur/uploads/outdoor-photos/thumbs/.gitkeep
 
 # Database dumps and backups (keep db/*.sql schema files)
 *.sql
