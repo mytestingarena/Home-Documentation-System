@@ -38,6 +38,21 @@ require_once __DIR__ . '/../includes/vsdx-convert.php';
 </div>
 <?php endif; ?>
 
+<?php
+// Newest PDF Preview — directly under upload so plans are visible without scrolling the list
+$newest_pdf_query = "SELECT filename FROM designs WHERE house_id = $house_id AND filename LIKE '%.pdf' ORDER BY upload_date DESC LIMIT 1";
+$newest_pdf = $conn->query($newest_pdf_query)->fetch_assoc();
+?>
+<div class="section-card">
+    <h3>Newest PDF Preview</h3>
+    <?php if ($newest_pdf): ?>
+        <?php $pdf_url = "uploads/designs/" . htmlspecialchars($newest_pdf['filename'], ENT_QUOTES, 'UTF-8'); ?>
+        <iframe src="<?php echo $pdf_url; ?>" class="pdf-preview" title="Newest PDF Preview"></iframe>
+    <?php else: ?>
+        <p style="color:#777; font-style:italic;">No PDF files uploaded yet.</p>
+    <?php endif; ?>
+</div>
+
 <?php if (hds_ui_section_enabled('designs-list', $hds_ui_settings)): ?>
 <div class="section-card">
     <h3>Uploaded Designs</h3>
@@ -214,17 +229,6 @@ require_once __DIR__ . '/../includes/vsdx-convert.php';
         }
         echo "</div>";
 
-        // Newest PDF Preview - BELOW the list
-        $newest_pdf_query = "SELECT filename FROM designs WHERE house_id = $house_id AND filename LIKE '%.pdf' ORDER BY upload_date DESC LIMIT 1";
-        $newest_pdf = $conn->query($newest_pdf_query)->fetch_assoc();
-
-        if ($newest_pdf) {
-            $pdf_url = "uploads/designs/" . htmlspecialchars($newest_pdf['filename'], ENT_QUOTES, 'UTF-8');
-            echo "<h3>Newest PDF Preview</h3>";
-            echo "<iframe src='$pdf_url' class='pdf-preview' title='Newest PDF Preview'></iframe>";
-        } else {
-            echo "<p style='color:#777; font-style:italic; margin-top:20px;'>No PDF files uploaded yet.</p>";
-        }
     }
     ?>
 </div>
