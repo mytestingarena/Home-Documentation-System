@@ -20,3 +20,14 @@ if (!defined('HDS_DRAWIO_URL')) {
     define('HDS_DRAWIO_URL', '/incur/drawio');
 }
 ?>
+
+// Visio → draw.io convert-on-upload (Orin Playwright service).
+// Start on Orin: ~/.grok/tools/start-vsdx-convert-server.sh
+// On failure the Visio upload is kept; only the .drawio sibling is skipped.
+if (!defined('HDS_VSDX_CONVERT_URL')) {
+    define('HDS_VSDX_CONVERT_URL', 'http://192.168.1.186:8765/convert');
+}
+if (!defined('HDS_VSDX_CONVERT_TIMEOUT')) {
+    define('HDS_VSDX_CONVERT_TIMEOUT', 150);
+}
+
