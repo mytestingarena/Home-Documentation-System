@@ -3282,8 +3282,8 @@ body.design-viewer-active {
     z-index: 1;
     display: flex;
     flex-direction: column;
-    width: min(96vw, 1400px);
-    height: min(94vh, 900px);
+    width: min(98vw, 1600px);
+    height: min(96vh, 1000px);
     margin: auto;
     background: #fff;
     border-radius: 10px;

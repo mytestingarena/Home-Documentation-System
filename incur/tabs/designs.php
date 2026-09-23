@@ -138,8 +138,9 @@ $viewable_exts = ['vsdx', 'vsd', 'vsdm', 'drawio', 'xml'];
             if (in_array($ext, $viewable_exts, true)) {
                 $file_url = $designs_file_endpoint . '?f=' . rawurlencode($file['filename']);
                 $title_enc = rawurlencode($file['filename']);
-                // diagrams.net lightbox: query params + #U + URL-encoded absolute file URL
-                $viewer_url = $drawio_base . '/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=' . $title_enc
+                // Minimal editor UI (not lightbox): lightbox hides page tabs; ui=min shows them.
+                // pages=1 keeps the multi-page tab bar; splash/format/sidebar off for a cleaner View.
+                $viewer_url = $drawio_base . '/?ui=min&splash=0&format=0&sidebar=0&windows=0&nav=1&layers=1&pages=1&title=' . $title_enc
                     . '#U' . rawurlencode($file_url);
                 $viewer_url_attr = htmlspecialchars($viewer_url, ENT_QUOTES, 'UTF-8');
                 $title_attr = htmlspecialchars($file['filename'], ENT_QUOTES, 'UTF-8');
