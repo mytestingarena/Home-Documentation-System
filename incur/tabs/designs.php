@@ -120,7 +120,7 @@ $newest_pdf = $conn->query($newest_pdf_query)->fetch_assoc();
     if ($result->num_rows == 0) {
         echo "<p style='color:#777; font-style:italic;'>No design files match the filter.</p>";
     } else {
-        echo "<div class='photo-grid'>";
+        echo "<div class='designs-grid'>";
         while ($file = $result->fetch_assoc()) {
             $raw_name = $file['filename'];
             $filename = htmlspecialchars($raw_name, ENT_QUOTES, 'UTF-8');
@@ -128,6 +128,7 @@ $newest_pdf = $conn->query($newest_pdf_query)->fetch_assoc();
 
             $note = '';
             $badge = '';
+            $badge_class = '';
             $view_filename = $raw_name;
             $is_visio = hds_designs_is_visio_ext($ext);
             $sibling_drawio = $is_visio ? hds_designs_drawio_sibling($raw_name) : '';
@@ -137,17 +138,19 @@ $newest_pdf = $conn->query($newest_pdf_query)->fetch_assoc();
                 $note = ' (from XPS)';
             }
             if ($is_visio && $has_drawio_sibling) {
-                $badge = '<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;background:#dbeafe;color:#1e40af;font-size:0.75em;">Visio original</span>';
-                // Primary View/Open target the converted draw.io (multi-page preserved).
+                $badge = 'Visio';
+                $badge_class = 'design-badge design-badge-visio';
                 $view_filename = $sibling_drawio;
             } elseif ($is_visio) {
-                $badge = '<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;background:#fef3c7;color:#92400e;font-size:0.75em;">Visio (no draw.io yet)</span>';
+                $badge = 'Visio only';
+                $badge_class = 'design-badge design-badge-warn';
             } elseif (($ext === 'drawio' || $ext === 'xml')) {
                 $visio_guess = preg_replace('/\.drawio$/i', '.vsdx', $raw_name);
                 $visio_guess2 = preg_replace('/\.drawio$/i', '.vsd', $raw_name);
                 $visio_guess3 = preg_replace('/\.drawio$/i', '.vsdm', $raw_name);
                 if (isset($all_names[$visio_guess]) || isset($all_names[$visio_guess2]) || isset($all_names[$visio_guess3])) {
-                    $badge = '<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;background:#ccfbf1;color:#0f766e;font-size:0.75em;">Editable draw.io</span>';
+                    $badge = 'draw.io';
+                    $badge_class = 'design-badge design-badge-drawio';
                     $note = ' (from Visio)';
                 }
             }
@@ -175,36 +178,39 @@ $newest_pdf = $conn->query($newest_pdf_query)->fetch_assoc();
                 $icon_color = '#ea580c';
             }
 
-            $preview = '<div style="height:140px;background:#f8f9fa;display:flex;align-items:center;justify-content:center;border-radius:6px;font-weight:bold;color:#6c757d;border:1px solid #dee2e6;">.' . strtoupper(htmlspecialchars($ext, ENT_QUOTES, 'UTF-8')) . '</div>';
+            $display_name = $raw_name;
+            if (strlen($display_name) > 28) {
+                $display_name = substr($display_name, 0, 12) . '…' . substr($display_name, -12);
+            }
+            $display_name_h = htmlspecialchars($display_name, ENT_QUOTES, 'UTF-8');
+            $ext_label = strtoupper(htmlspecialchars($ext, ENT_QUOTES, 'UTF-8'));
+            $date_short = date('M j', strtotime($file['upload_date']));
 
-            echo "<div class='photo-item' style='text-align:center;'>";
-            echo $preview;
-            echo "<p style='margin:8px 0; font-size:0.95em;'>";
-            echo "<i class='fa-solid $icon' style='color:$icon_color; margin-right:6px; font-size:1.2em;'></i>";
-            echo "<a href='uploads/designs/$filename' target='_blank' download>$filename$note</a>$badge</p>";
-            echo "<p style='font-size:0.85em; color:#666;'>$size_str • Uploaded: " . date('M j, Y g:i A', strtotime($file['upload_date'])) . "</p>";
+            echo "<div class='design-card'>";
+            echo "<div class='design-card-preview' style='color:$icon_color;'>";
+            echo "<i class='fa-solid $icon' aria-hidden='true'></i>";
+            echo "<span class='design-card-ext'>.$ext_label</span>";
+            echo "</div>";
+            echo "<a class='design-card-name' href='uploads/designs/$filename' target='_blank' download title=\"$filename$note\">$display_name_h</a>";
+            if ($badge !== '') {
+                echo "<span class='$badge_class'>$badge</span>";
+            }
+            echo "<div class='design-card-meta'>$size_str · $date_short</div>";
+            echo "<div class='design-card-actions'>";
 
-            echo "<div class='design-item-actions' style='display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:10px;'>";
-
-            // Prefer draw.io sibling for View when Visio was converted; Visio itself stays downloadable.
             $view_ext = strtolower(pathinfo($view_filename, PATHINFO_EXTENSION));
             if (in_array($view_ext, $viewable_exts, true)) {
                 $file_url = $designs_file_endpoint . '?f=' . rawurlencode($view_filename);
                 $title_enc = rawurlencode($view_filename);
-                // Modal: lean UI (not lightbox — lightbox hides page tabs). Keep pages=1.
-                // Do not set sidebar=0/windows=0 here either; those remove panel parents and
-                // Diagram → Shapes can throw appendChild on null parentNode.
                 $viewer_url = $drawio_base . '/?ui=min&splash=0&nav=1&layers=1&pages=1&title=' . $title_enc
                     . '#U' . rawurlencode($file_url);
-                // Open in tab: full kennedy chrome so Shapes / Diagram menus work; pages still on.
                 $tab_url = $drawio_base . '/?ui=kennedy&splash=0&nav=1&layers=1&pages=1&title=' . $title_enc
                     . '#U' . rawurlencode($file_url);
                 $viewer_url_attr = htmlspecialchars($viewer_url, ENT_QUOTES, 'UTF-8');
                 $tab_url_attr = htmlspecialchars($tab_url, ENT_QUOTES, 'UTF-8');
                 $title_attr = htmlspecialchars($view_filename, ENT_QUOTES, 'UTF-8');
-                $view_label = ($is_visio && $has_drawio_sibling) ? 'View draw.io' : 'View';
+                $view_label = ($is_visio && $has_drawio_sibling) ? 'draw.io' : 'View';
                 echo "<button type='button' class='small-btn design-view-open' data-viewer-url=\"$viewer_url_attr\" data-tab-url=\"$tab_url_attr\" data-title=\"$title_attr\">$view_label</button>";
-                // Optional: Visio-native view when a draw.io sibling is primary
                 if ($is_visio && $has_drawio_sibling) {
                     $v_url = $designs_file_endpoint . '?f=' . rawurlencode($raw_name);
                     $v_title = rawurlencode($raw_name);
@@ -215,16 +221,15 @@ $newest_pdf = $conn->query($newest_pdf_query)->fetch_assoc();
                     echo "<button type='button' class='small-btn design-view-open' data-viewer-url=\""
                         . htmlspecialchars($v_viewer, ENT_QUOTES, 'UTF-8') . "\" data-tab-url=\""
                         . htmlspecialchars($v_tab, ENT_QUOTES, 'UTF-8') . "\" data-title=\""
-                        . htmlspecialchars($raw_name, ENT_QUOTES, 'UTF-8') . "\">View Visio</button>";
+                        . htmlspecialchars($raw_name, ENT_QUOTES, 'UTF-8') . "\">Visio</button>";
                 }
             }
 
             echo "<form method='post' style='margin:0;' onsubmit='return confirm(\"Delete $filename permanently? This cannot be undone.\");'>";
             echo "<input type='hidden' name='design_id' value='{$file['id']}'>";
-            echo "<input type='submit' name='delete_design' value='Delete' class='delete-btn'>";
+            echo "<input type='submit' name='delete_design' value='Del' class='delete-btn' title='Delete'>";
             echo "</form>";
             echo "</div>";
-
             echo "</div>";
         }
         echo "</div>";
