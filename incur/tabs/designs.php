@@ -138,13 +138,18 @@ $viewable_exts = ['vsdx', 'vsd', 'vsdm', 'drawio', 'xml'];
             if (in_array($ext, $viewable_exts, true)) {
                 $file_url = $designs_file_endpoint . '?f=' . rawurlencode($file['filename']);
                 $title_enc = rawurlencode($file['filename']);
-                // Minimal editor UI (not lightbox): lightbox hides page tabs; ui=min shows them.
-                // pages=1 keeps the multi-page tab bar; splash/format/sidebar off for a cleaner View.
-                $viewer_url = $drawio_base . '/?ui=min&splash=0&format=0&sidebar=0&windows=0&nav=1&layers=1&pages=1&title=' . $title_enc
+                // Modal: lean UI (not lightbox — lightbox hides page tabs). Keep pages=1.
+                // Do not set sidebar=0/windows=0 here either; those remove panel parents and
+                // Diagram → Shapes can throw appendChild on null parentNode.
+                $viewer_url = $drawio_base . '/?ui=min&splash=0&nav=1&layers=1&pages=1&title=' . $title_enc
+                    . '#U' . rawurlencode($file_url);
+                // Open in tab: full kennedy chrome so Shapes / Diagram menus work; pages still on.
+                $tab_url = $drawio_base . '/?ui=kennedy&splash=0&nav=1&layers=1&pages=1&title=' . $title_enc
                     . '#U' . rawurlencode($file_url);
                 $viewer_url_attr = htmlspecialchars($viewer_url, ENT_QUOTES, 'UTF-8');
+                $tab_url_attr = htmlspecialchars($tab_url, ENT_QUOTES, 'UTF-8');
                 $title_attr = htmlspecialchars($file['filename'], ENT_QUOTES, 'UTF-8');
-                echo "<button type='button' class='small-btn design-view-open' data-viewer-url=\"$viewer_url_attr\" data-title=\"$title_attr\">View</button>";
+                echo "<button type='button' class='small-btn design-view-open' data-viewer-url=\"$viewer_url_attr\" data-tab-url=\"$tab_url_attr\" data-title=\"$title_attr\">View</button>";
             }
             echo "<form method='post' style='margin:0;' onsubmit='return confirm(\"Delete $filename permanently? This cannot be undone.\");'>";
             echo "<input type='hidden' name='design_id' value='{$file['id']}'>";

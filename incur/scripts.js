@@ -948,10 +948,11 @@ function initDesignViewer() {
     if (frame) frame.src = "about:blank";
   }
 
-  function openViewer(url, title) {
+  function openViewer(url, title, tabUrl) {
     if (!url) return;
     if (titleEl) titleEl.textContent = title || "Design";
-    if (openTab) openTab.href = url;
+    // Prefer fuller-chrome tab URL when present (Shapes / Diagram menu need sidebar DOM).
+    if (openTab) openTab.href = tabUrl || url;
     if (frame) frame.src = url;
     modal.hidden = false;
     modal.setAttribute("aria-hidden", "false");
@@ -966,7 +967,11 @@ function initDesignViewer() {
     var btn = evt.target.closest(".design-view-open");
     if (btn) {
       evt.preventDefault();
-      openViewer(btn.getAttribute("data-viewer-url"), btn.getAttribute("data-title"));
+      openViewer(
+        btn.getAttribute("data-viewer-url"),
+        btn.getAttribute("data-title"),
+        btn.getAttribute("data-tab-url")
+      );
     }
   });
 
