@@ -11,4 +11,12 @@ if (!defined('WIFI_TAB_PASSWORD')) {
 if (!defined('ADMIN_TAB_PASSWORD')) {
     define('ADMIN_TAB_PASSWORD', 'your_admin_tab_password_here');
 }
+
+// Self-hosted draw.io base for Designs View lightbox.
+// Prefer same-origin proxy under HDS (Apache ProxyPass /incur/drawio/ -> draw.io CT).
+// Direct LAN URL http://192.168.1.10:8080 also works for Open-in-tab, but static
+// draw.io has no /proxy servlet so cross-origin #U loads fail without CORS+proxy.
+if (!defined('HDS_DRAWIO_URL')) {
+    define('HDS_DRAWIO_URL', '/incur/drawio');
+}
 ?>

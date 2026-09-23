@@ -1,7 +1,27 @@
 <?php
-// tabs/designs.php — Designs tab content
+// tabs/designs.php — Designs tab content (download + in-frame draw.io viewer)
 
 global $conn, $house_id, $hds_ui_settings;
+
+if (!defined('HDS_DRAWIO_URL')) {
+    define('HDS_DRAWIO_URL', '/incur/drawio');  // same-origin Apache proxy -> LAN draw.io
+}
+
+$drawio_base = rtrim(HDS_DRAWIO_URL, '/');
+
+// Absolute base for designs-file.php so draw.io (other origin) can fetch the file.
+$https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (isset($_SERVER['SERVER_PORT']) && (string)$_SERVER['SERVER_PORT'] === '443')
+    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+$scheme = $https ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? '192.168.1.110';
+$script_dir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/incur')), '/');
+if ($script_dir === '' || $script_dir === '/') {
+    $script_dir = '/incur';
+}
+$designs_file_endpoint = $scheme . '://' . $host . $script_dir . '/designs-file.php';
+
+$viewable_exts = ['vsdx', 'vsd', 'vsdm', 'drawio', 'xml'];
 ?>
 
 <h2>Designs / Drawings / Plans</h2>
@@ -10,8 +30,8 @@ global $conn, $house_id, $hds_ui_settings;
 <div class="section-card">
     <h3>Upload Design Files</h3>
     <form method="post" enctype="multipart/form-data">
-        <input type="file" name="designs[]" multiple>
-        <br><small>Select multiple files at once.<br>Allowed: Visio (.vsd/.vsdx), PDF, XPS, Office docs, LibreOffice, ZIP<br><strong>.xps files are automatically converted to .pdf using mutool (both kept)</strong></small><br><br>
+        <input type="file" name="designs[]" multiple accept=".vsd,.vsdx,.vsdm,.drawio,.xml,.pdf,.xps,.doc,.docx,.xls,.xlsx,.ods,.odt,.zip">
+        <br><small>Select multiple files at once.<br>Allowed: Visio (.vsd/.vsdx), draw.io (.drawio/.xml), PDF, XPS, Office docs, LibreOffice, ZIP<br><strong>.xps files are automatically converted to .pdf using mutool (both kept)</strong><br>Visio and draw.io files can be opened in-frame via local draw.io.</small><br><br>
         <input type="submit" name="upload_designs" value="Upload Files">
     </form>
 </div>
@@ -32,7 +52,13 @@ global $conn, $house_id, $hds_ui_settings;
 
     $where = '';
     if ($designs_filter != 'all') {
-        $where = "AND LOWER(filename) LIKE '%.$designs_filter%'";
+        if ($designs_filter === 'vsd') {
+            $where = "AND (LOWER(filename) LIKE '%.vsd' OR LOWER(filename) LIKE '%.vsdx' OR LOWER(filename) LIKE '%.vsdm')";
+        } elseif ($designs_filter === 'drawio') {
+            $where = "AND (LOWER(filename) LIKE '%.drawio' OR LOWER(filename) LIKE '%.xml')";
+        } else {
+            $where = "AND LOWER(filename) LIKE '%.$designs_filter%'";
+        }
     }
     ?>
 
@@ -53,6 +79,7 @@ global $conn, $house_id, $hds_ui_settings;
             <option value="pdf" <?php echo ($designs_filter == 'pdf') ? 'selected' : ''; ?>>PDF</option>
             <option value="xps" <?php echo ($designs_filter == 'xps') ? 'selected' : ''; ?>>XPS</option>
             <option value="vsd" <?php echo ($designs_filter == 'vsd') ? 'selected' : ''; ?>>Visio</option>
+            <option value="drawio" <?php echo ($designs_filter == 'drawio') ? 'selected' : ''; ?>>draw.io</option>
             <option value="zip" <?php echo ($designs_filter == 'zip') ? 'selected' : ''; ?>>ZIP</option>
         </select>
 
@@ -70,12 +97,12 @@ global $conn, $house_id, $hds_ui_settings;
     } else {
         echo "<div class='photo-grid'>";
         while ($file = $result->fetch_assoc()) {
-            $filename = htmlspecialchars($file['filename']);
-            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            $filename = htmlspecialchars($file['filename'], ENT_QUOTES, 'UTF-8');
+            $ext = strtolower(pathinfo($file['filename'], PATHINFO_EXTENSION));
 
-            $note = ($ext === 'pdf' && strpos($filename, '_') !== false) ? ' (from XPS)' : '';
+            $note = ($ext === 'pdf' && strpos($file['filename'], '_') !== false) ? ' (from XPS)' : '';
 
-            $full_path = "uploads/designs/" . $filename;
+            $full_path = "uploads/designs/" . $file['filename'];
             $size = file_exists($full_path) ? filesize($full_path) : 0;
             $size_str = $size > 1024*1024 ? round($size / (1024*1024), 1) . ' MB' : round($size / 1024, 1) . ' KB';
 
@@ -90,12 +117,15 @@ global $conn, $house_id, $hds_ui_settings;
             } else if (strpos($ext, 'vsd') !== false) {
                 $icon = 'fa-file-lines';
                 $icon_color = '#1d4ed8';
+            } else if ($ext === 'drawio' || $ext === 'xml') {
+                $icon = 'fa-diagram-project';
+                $icon_color = '#0d9488';
             } else if ($ext === 'zip') {
                 $icon = 'fa-file-zipper';
                 $icon_color = '#ea580c';
             }
 
-            $preview = '<div style="height:140px;background:#f8f9fa;display:flex;align-items:center;justify-content:center;border-radius:6px;font-weight:bold;color:#6c757d;border:1px solid #dee2e6;">.' . strtoupper($ext) . '</div>';
+            $preview = '<div style="height:140px;background:#f8f9fa;display:flex;align-items:center;justify-content:center;border-radius:6px;font-weight:bold;color:#6c757d;border:1px solid #dee2e6;">.' . strtoupper(htmlspecialchars($ext, ENT_QUOTES, 'UTF-8')) . '</div>';
 
             echo "<div class='photo-item' style='text-align:center;'>";
             echo $preview;
@@ -104,10 +134,22 @@ global $conn, $house_id, $hds_ui_settings;
             echo "<a href='uploads/designs/$filename' target='_blank' download>$filename$note</a></p>";
             echo "<p style='font-size:0.85em; color:#666;'>$size_str • Uploaded: " . date('M j, Y g:i A', strtotime($file['upload_date'])) . "</p>";
 
-            echo "<form method='post' style='margin-top:10px;' onsubmit='return confirm(\"Delete $filename permanently? This cannot be undone.\");'>";
+            echo "<div class='design-item-actions' style='display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:10px;'>";
+            if (in_array($ext, $viewable_exts, true)) {
+                $file_url = $designs_file_endpoint . '?f=' . rawurlencode($file['filename']);
+                $title_enc = rawurlencode($file['filename']);
+                // diagrams.net lightbox: query params + #U + URL-encoded absolute file URL
+                $viewer_url = $drawio_base . '/?lightbox=1&highlight=0000ff&edit=_blank&layers=1&nav=1&title=' . $title_enc
+                    . '#U' . rawurlencode($file_url);
+                $viewer_url_attr = htmlspecialchars($viewer_url, ENT_QUOTES, 'UTF-8');
+                $title_attr = htmlspecialchars($file['filename'], ENT_QUOTES, 'UTF-8');
+                echo "<button type='button' class='small-btn design-view-open' data-viewer-url=\"$viewer_url_attr\" data-title=\"$title_attr\">View</button>";
+            }
+            echo "<form method='post' style='margin:0;' onsubmit='return confirm(\"Delete $filename permanently? This cannot be undone.\");'>";
             echo "<input type='hidden' name='design_id' value='{$file['id']}'>";
             echo "<input type='submit' name='delete_design' value='Delete' class='delete-btn'>";
             echo "</form>";
+            echo "</div>";
 
             echo "</div>";
         }
@@ -118,7 +160,7 @@ global $conn, $house_id, $hds_ui_settings;
         $newest_pdf = $conn->query($newest_pdf_query)->fetch_assoc();
 
         if ($newest_pdf) {
-            $pdf_url = "uploads/designs/" . htmlspecialchars($newest_pdf['filename']);
+            $pdf_url = "uploads/designs/" . htmlspecialchars($newest_pdf['filename'], ENT_QUOTES, 'UTF-8');
             echo "<h3>Newest PDF Preview</h3>";
             echo "<iframe src='$pdf_url' class='pdf-preview' title='Newest PDF Preview'></iframe>";
         } else {
@@ -126,5 +168,20 @@ global $conn, $house_id, $hds_ui_settings;
         }
     }
     ?>
+</div>
+
+<!-- draw.io in-frame viewer modal -->
+<div id="designViewerModal" class="design-viewer-modal" hidden aria-hidden="true">
+    <div class="design-viewer-backdrop" data-design-viewer-close></div>
+    <div class="design-viewer-dialog" role="dialog" aria-modal="true" aria-label="Design viewer">
+        <div class="design-viewer-toolbar">
+            <span class="design-viewer-title" id="designViewerTitle">Design</span>
+            <div class="design-viewer-toolbar-actions">
+                <a id="designViewerOpenTab" class="small-btn" href="#" target="_blank" rel="noopener">Open in tab</a>
+                <button type="button" class="design-viewer-close" data-design-viewer-close aria-label="Close">&times;</button>
+            </div>
+        </div>
+        <iframe id="designViewerFrame" class="design-viewer-frame" title="draw.io diagram viewer" allowfullscreen></iframe>
+    </div>
 </div>
 <?php endif; ?>

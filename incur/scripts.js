@@ -165,6 +165,7 @@ document.addEventListener("DOMContentLoaded", function() {
   initPermLogRenameModal();
   initFirearmRenameModal();
   initWaterDocRenameModal();
+  initDesignViewer();
   initViewEdit();
   initPermanentLogContractorFields();
   initHouseholdTypeFields();
@@ -926,4 +927,51 @@ function toggleWifiPassword(button) {
     field.type = "password";
     button.textContent = "Show";
   }
+}
+
+function initDesignViewer() {
+  var modal = document.getElementById("designViewerModal");
+  if (!modal) return;
+
+  if (modal.parentElement && modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  var frame = document.getElementById("designViewerFrame");
+  var titleEl = document.getElementById("designViewerTitle");
+  var openTab = document.getElementById("designViewerOpenTab");
+
+  function closeViewer() {
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("design-viewer-active");
+    if (frame) frame.src = "about:blank";
+  }
+
+  function openViewer(url, title) {
+    if (!url) return;
+    if (titleEl) titleEl.textContent = title || "Design";
+    if (openTab) openTab.href = url;
+    if (frame) frame.src = url;
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("design-viewer-active");
+  }
+
+  document.addEventListener("click", function(evt) {
+    if (evt.target.closest("[data-design-viewer-close]")) {
+      closeViewer();
+      return;
+    }
+    var btn = evt.target.closest(".design-view-open");
+    if (btn) {
+      evt.preventDefault();
+      openViewer(btn.getAttribute("data-viewer-url"), btn.getAttribute("data-title"));
+    }
+  });
+
+  document.addEventListener("keydown", function(evt) {
+    if (modal.hidden) return;
+    if (evt.key === "Escape") closeViewer();
+  });
 }

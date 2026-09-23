@@ -3252,3 +3252,111 @@ body.media-rename-active {
     border-radius: 6px;
     cursor: pointer;
 }
+
+/* Design viewer (draw.io iframe modal) */
+.design-viewer-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+}
+
+.design-viewer-modal[hidden] {
+    display: none !important;
+}
+
+body.design-viewer-active {
+    overflow: hidden;
+}
+
+.design-viewer-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.72);
+}
+
+.design-viewer-dialog {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    width: min(96vw, 1400px);
+    height: min(94vh, 900px);
+    margin: auto;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.design-viewer-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #0f172a;
+    color: #f8fafc;
+}
+
+.design-viewer-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.design-viewer-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.design-viewer-toolbar-actions .small-btn {
+    background: #334155;
+    color: #f8fafc;
+    border: 1px solid #475569;
+    text-decoration: none;
+}
+
+.design-viewer-toolbar-actions .small-btn:hover {
+    background: #475569;
+}
+
+.design-viewer-close {
+    border: none;
+    background: transparent;
+    color: #f8fafc;
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.design-viewer-close:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.design-viewer-frame {
+    flex: 1;
+    width: 100%;
+    border: 0;
+    background: #f1f5f9;
+}
+
+.design-item-actions .small-btn {
+    cursor: pointer;
+}
+
+@media (max-width: 700px) {
+    .design-viewer-dialog {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+    }
+}

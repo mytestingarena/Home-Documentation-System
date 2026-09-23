@@ -1,0 +1,11 @@
+# Snippet for HDS Apache vhost (already applied on CT 137).
+# Same-origin reverse proxy so Designs View can load Visio/draw.io via lightbox #U
+# without the diagrams.net /proxy servlet (static nginx deploy has none).
+#
+# Requires: a2enmod proxy proxy_http
+#
+#    ProxyRequests Off
+#    ProxyPreserveHost Off
+#    ProxyPass        /incur/drawio/ http://192.168.1.10:8080/
+#    ProxyPassReverse /incur/drawio/ http://192.168.1.10:8080/
+#    RedirectMatch ^/incur/drawio$ /incur/drawio/
