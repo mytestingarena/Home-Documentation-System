@@ -3,6 +3,9 @@
 
 global $conn, $house_id, $hds_ui_settings;
 
+require_once __DIR__ . '/../includes/utility-docs.php';
+
+$open_bill_id = intval($_GET['open_bill'] ?? 0);
 $receipts_uploaded = false;
 if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'][0])) {
     $receipts_uploaded = true;
@@ -10,10 +13,28 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
 ?>
 
 <h2>Utility Services</h2>
+<?php
+if (!empty($_SESSION['utility_doc_success'])) {
+    echo "<p class='media-success'>" . htmlspecialchars($_SESSION['utility_doc_success'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['utility_doc_success']);
+}
+if (!empty($_SESSION['utility_doc_error'])) {
+    echo "<p class='media-error'>" . htmlspecialchars($_SESSION['utility_doc_error'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['utility_doc_error']);
+}
+if (!empty($_SESSION['water_doc_success'])) {
+    echo "<p class='media-success'>" . htmlspecialchars($_SESSION['water_doc_success'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['water_doc_success']);
+}
+if (!empty($_SESSION['water_doc_error'])) {
+    echo "<p class='media-error'>" . htmlspecialchars($_SESSION['water_doc_error'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['water_doc_error']);
+}
+?>
 
 <div class="collapsible-list-toolbar">
-    <button type="button" class="small-btn" onclick="collapsibleExpandAll('.utility-stack .collapsible-section', true)">Expand all</button>
-    <button type="button" class="small-btn" onclick="collapsibleExpandAll('.utility-stack .collapsible-section', false)">Collapse all</button>
+    <button type="button" class="small-btn" onclick="collapsibleExpandAll('.utility-stack > .collapsible-section', true)">Expand all</button>
+    <button type="button" class="small-btn" onclick="collapsibleExpandAll('.utility-stack > .collapsible-section', false)">Collapse all</button>
 </div>
 
 <div class="utility-stack">
@@ -174,6 +195,7 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
         $water_account = htmlspecialchars($water['account_number'] ?? '', ENT_QUOTES, 'UTF-8');
         $water_meter = htmlspecialchars($water['meter_number'] ?? '', ENT_QUOTES, 'UTF-8');
         $water_phone = htmlspecialchars($water['phone'] ?? '', ENT_QUOTES, 'UTF-8');
+        $water_payment_url = htmlspecialchars($water['payment_url'] ?? '', ENT_QUOTES, 'UTF-8');
         $water_freq = $water['billing_frequency'] ?? 'Monthly';
         ?>
         <div data-view-edit class="hds-ve-block">
@@ -188,6 +210,7 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
                     <p class="hds-ve-field"><span class="hds-ve-label">Meter Number:</span> <?php echo hds_ve_display($water['meter_number'] ?? ''); ?></p>
                     <p class="hds-ve-field"><span class="hds-ve-label">Billing Frequency:</span> <?php echo hds_ve_display($water_freq); ?></p>
                     <p class="hds-ve-field"><span class="hds-ve-label">Phone:</span> <?php echo hds_ve_display($water['phone'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Pay bill at:</span> <?php echo hds_utility_payment_url_html($water['payment_url'] ?? ''); ?></p>
                 </div>
             </div>
             <div data-view-edit-form hidden>
@@ -204,6 +227,9 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
                     </select><br><br>
                     <label>Phone:</label><br>
                     <input type="text" name="phone" value="<?php echo $water_phone; ?>"><br><br>
+                    <label>Pay bill website:</label><br>
+                    <input type="url" name="payment_url" value="<?php echo $water_payment_url; ?>" placeholder="https://example.com/pay" style="width:100%;"><br>
+                    <small>Link to the water company's online payment page.</small><br><br>
                     <div class="hds-ve-edit-actions">
                         <input type="submit" name="save_water_account" value="Save Account Info">
                         <button type="button" class="small-btn" data-view-edit-cancel>Cancel</button>
@@ -212,70 +238,27 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
             </div>
         </div>
 
-        <form method="post" class="utility-subform">
+        <form method="post" enctype="multipart/form-data" class="utility-subform">
             <strong>Add Current/Next Bill:</strong><br><br>
             Amount Owed ($): <input type="number" step="0.01" name="amount_owed" placeholder="0.00" required><br><br>
             Due Date: <input type="date" name="due_date" required><br><br>
+            <label>Copy of bill (PDF or photo):</label><br>
+            <input type="file" name="water_bill_pdf" accept="application/pdf,.pdf,image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"><br>
+            <small>Optional — attach a PDF or photo of the bill now, or add it later below.</small><br><br>
             <input type="submit" name="save_water_bill" value="Save Bill">
         </form>
 
         <div class="billing-history">
-            <h4>Bill History (with Receipts)</h4>
+            <h4>Bill History</h4>
             <?php
             $bills = $conn->query("SELECT * FROM utility_bills WHERE house_id = $house_id AND utility_type = 'water' ORDER BY due_date DESC");
-            if ($bills->num_rows > 0) {
+            if ($bills && $bills->num_rows > 0) {
+                echo "<div class='collapsible-list-toolbar billing-history-toolbar'>";
+                echo "<button type='button' class='small-btn' onclick=\"collapsibleExpandAll('#utility-water .billing-history .collapsible-section', true)\">Expand all bills</button>";
+                echo "<button type='button' class='small-btn' onclick=\"collapsibleExpandAll('#utility-water .billing-history .collapsible-section', false)\">Collapse all bills</button>";
+                echo "</div>";
                 while ($bill = $bills->fetch_assoc()) {
-                    $paid_class = $bill['is_paid'] ? 'paid' : 'unpaid';
-                    $bill_id = $bill['id'];
-                    $receipts = $conn->query("SELECT * FROM water_receipts WHERE bill_id = $bill_id ORDER BY upload_date DESC");
-
-                    echo "<div class='billing-entry $paid_class'>";
-                    echo "<div class='billing-entry-top'>";
-                    echo "<div><strong>$" . number_format($bill['amount_owed'], 2) . "</strong> — Due: " . $bill['due_date'] . "</div>";
-                    $payment_method = $bill['payment_method'] ?? '';
-                    echo "<div class='billing-entry-actions'>";
-                    echo "<form method='post' class='billing-paid-form'>";
-                    echo "<input type='hidden' name='bill_id' value='$bill_id'>";
-                    echo "<label class='billing-paid-label'>Paid: <input type='checkbox' name='is_paid' " . ($bill['is_paid'] ? 'checked' : '') . " onchange='this.form.submit();'></label>";
-                    echo "<label class='billing-paid-label'>Paid with:";
-                    echo "<select name='payment_method' class='billing-payment-select' onchange='this.form.submit();'>";
-                    echo "<option value=''" . ($payment_method === '' ? ' selected' : '') . ">—</option>";
-                    echo "<option value='debit'" . ($payment_method === 'debit' ? ' selected' : '') . ">Debit</option>";
-                    echo "<option value='credit'" . ($payment_method === 'credit' ? ' selected' : '') . ">Credit</option>";
-                    echo "<option value='check'" . ($payment_method === 'check' ? ' selected' : '') . ">Check</option>";
-                    echo "</select></label>";
-                    echo "<input type='hidden' name='toggle_bill_paid' value='1'>";
-                    echo "</form>";
-                    echo "<form method='post' onsubmit='return confirm(\"Delete this bill and all receipts?\");'>";
-                    echo "<input type='hidden' name='bill_id' value='$bill_id'>";
-                    echo "<input type='submit' name='delete_bill' value='Delete' class='delete-bill-btn'>";
-                    echo "</form>";
-                    echo "</div>";
-                    echo "</div>";
-
-                    echo "<form method='post' enctype='multipart/form-data' class='receipt-upload-form'>";
-                    echo "<input type='hidden' name='bill_id' value='$bill_id'>";
-                    echo "<input type='file' name='receipts[]' accept='.pdf' multiple>";
-                    echo "<small>Upload PDF receipt(s) (max 5)</small><br>";
-                    echo "<input type='submit' name='upload_receipt' value='Upload Receipt(s)'>";
-                    echo "</form>";
-
-                    if ($receipts->num_rows > 0 || $receipts_uploaded) {
-                        if ($receipts_uploaded) {
-                            $receipts = $conn->query("SELECT * FROM water_receipts WHERE bill_id = $bill_id ORDER BY upload_date DESC");
-                        }
-                        echo "<div class='receipt-list'>";
-                        echo "<strong>Uploaded Receipts:</strong><br>";
-                        while ($receipt = $receipts->fetch_assoc()) {
-                            $rfn = htmlspecialchars($receipt['filename']);
-                            $rpath = "uploads/receipts/" . $rfn;
-                            $rdate = date('M j, Y g:i A', strtotime($receipt['upload_date']));
-                            echo "<a href='$rpath' target='_blank' class='receipt-link'>$rfn - $rdate</a>";
-                        }
-                        echo "</div>";
-                    }
-
-                    echo "</div>";
+                    hds_render_utility_bill_entry($conn, $house_id, $bill, 'water', $open_bill_id);
                 }
             } else {
                 echo "<p class='empty-note'>No water bills recorded yet.</p>";
@@ -297,9 +280,11 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
         <?php
         $propane = $conn->query("SELECT * FROM propane_utilities WHERE house_id = $house_id LIMIT 1")->fetch_assoc() ?? [];
         $prop_gallons = htmlspecialchars($propane['gallons'] ?? '', ENT_QUOTES, 'UTF-8');
+        $prop_account = htmlspecialchars($propane['account_number'] ?? '', ENT_QUOTES, 'UTF-8');
         $prop_provider = htmlspecialchars($propane['provider'] ?? '', ENT_QUOTES, 'UTF-8');
         $prop_tank_sn = htmlspecialchars($propane['tank_sn'] ?? '', ENT_QUOTES, 'UTF-8');
         $prop_phone = htmlspecialchars($propane['phone'] ?? '', ENT_QUOTES, 'UTF-8');
+        $prop_payment_url = htmlspecialchars($propane['payment_url'] ?? '', ENT_QUOTES, 'UTF-8');
         ?>
         <div data-view-edit class="hds-ve-block">
             <div data-view-edit-view>
@@ -310,21 +295,28 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
                 </div>
                 <div class="hds-ve-body">
                     <p class="hds-ve-field"><span class="hds-ve-label">Gallons:</span> <?php echo hds_ve_display($propane['gallons'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Account Number:</span> <?php echo hds_ve_display($propane['account_number'] ?? ''); ?></p>
                     <p class="hds-ve-field"><span class="hds-ve-label">Provider:</span> <?php echo hds_ve_display($propane['provider'] ?? ''); ?></p>
                     <p class="hds-ve-field"><span class="hds-ve-label">Tank SN:</span> <?php echo hds_ve_display($propane['tank_sn'] ?? ''); ?></p>
                     <p class="hds-ve-field"><span class="hds-ve-label">Phone:</span> <?php echo hds_ve_display($propane['phone'] ?? ''); ?></p>
+                    <p class="hds-ve-field"><span class="hds-ve-label">Pay bill at:</span> <?php echo hds_utility_payment_url_html($propane['payment_url'] ?? ''); ?></p>
                 </div>
             </div>
             <div data-view-edit-form hidden>
                 <form method="post">
                     <label>Gallons:</label><br>
                     <input type="number" step="0.1" name="gallons" value="<?php echo $prop_gallons; ?>"><br><br>
+                    <label>Account Number:</label><br>
+                    <input type="text" name="account_number" value="<?php echo $prop_account; ?>"><br><br>
                     <label>Provider:</label><br>
                     <input type="text" name="provider" value="<?php echo $prop_provider; ?>"><br><br>
                     <label>Tank SN:</label><br>
                     <input type="text" name="tank_sn" value="<?php echo $prop_tank_sn; ?>"><br><br>
                     <label>Phone:</label><br>
                     <input type="text" name="phone" value="<?php echo $prop_phone; ?>"><br><br>
+                    <label>Pay bill website:</label><br>
+                    <input type="url" name="payment_url" value="<?php echo $prop_payment_url; ?>" placeholder="https://example.com/pay" style="width:100%;"><br>
+                    <small>Link to the propane company's online payment page.</small><br><br>
                     <div class="hds-ve-edit-actions">
                         <input type="submit" name="save_propane_account" value="Save Propane Info">
                         <button type="button" class="small-btn" data-view-edit-cancel>Cancel</button>
@@ -333,62 +325,27 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
             </div>
         </div>
 
-        <form method="post" class="utility-subform">
+        <form method="post" enctype="multipart/form-data" class="utility-subform">
             <strong>Add Current/Next Bill:</strong><br><br>
             Amount Owed ($): <input type="number" step="0.01" name="amount_owed" placeholder="0.00" required><br><br>
             Due Date: <input type="date" name="due_date" required><br><br>
+            <label>Copy of bill (PDF or photo):</label><br>
+            <input type="file" name="propane_bill_pdf" accept="application/pdf,.pdf,image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"><br>
+            <small>Optional — attach a PDF or photo of the bill now, or add it later below.</small><br><br>
             <input type="submit" name="save_propane_bill" value="Save Bill">
         </form>
 
         <div class="billing-history">
-            <h4>Bill History (with Receipts)</h4>
+            <h4>Bill History</h4>
             <?php
             $bills = $conn->query("SELECT * FROM utility_bills WHERE house_id = $house_id AND utility_type = 'propane' ORDER BY due_date DESC");
-            if ($bills->num_rows > 0) {
+            if ($bills && $bills->num_rows > 0) {
+                echo "<div class='collapsible-list-toolbar billing-history-toolbar'>";
+                echo "<button type='button' class='small-btn' onclick=\"collapsibleExpandAll('#utility-propane .billing-history .collapsible-section', true)\">Expand all bills</button>";
+                echo "<button type='button' class='small-btn' onclick=\"collapsibleExpandAll('#utility-propane .billing-history .collapsible-section', false)\">Collapse all bills</button>";
+                echo "</div>";
                 while ($bill = $bills->fetch_assoc()) {
-                    $paid_class = $bill['is_paid'] ? 'paid' : 'unpaid';
-                    $bill_id = $bill['id'];
-                    $receipts = $conn->query("SELECT * FROM propane_receipts WHERE bill_id = $bill_id ORDER BY upload_date DESC");
-
-                    echo "<div class='billing-entry $paid_class'>";
-                    echo "<div class='billing-entry-top'>";
-                    echo "<div><strong>$" . number_format($bill['amount_owed'], 2) . "</strong> — Due: " . $bill['due_date'] . "</div>";
-                    echo "<div class='billing-entry-actions'>";
-                    echo "<form method='post'>";
-                    echo "<input type='hidden' name='bill_id' value='$bill_id'>";
-                    echo "Paid: <input type='checkbox' name='is_paid' " . ($bill['is_paid'] ? 'checked' : '') . " onchange='this.form.submit();'>";
-                    echo "<input type='hidden' name='toggle_bill_paid' value='1'>";
-                    echo "</form>";
-                    echo "<form method='post' onsubmit='return confirm(\"Delete this bill and all receipts?\");'>";
-                    echo "<input type='hidden' name='bill_id' value='$bill_id'>";
-                    echo "<input type='submit' name='delete_bill' value='Delete' class='delete-bill-btn'>";
-                    echo "</form>";
-                    echo "</div>";
-                    echo "</div>";
-
-                    echo "<form method='post' enctype='multipart/form-data' class='receipt-upload-form'>";
-                    echo "<input type='hidden' name='bill_id' value='$bill_id'>";
-                    echo "<input type='file' name='receipts[]' accept='.pdf' multiple>";
-                    echo "<small>Upload PDF receipt(s) (max 5)</small><br>";
-                    echo "<input type='submit' name='upload_propane_receipt' value='Upload Receipt(s)'>";
-                    echo "</form>";
-
-                    if ($receipts->num_rows > 0 || $receipts_uploaded) {
-                        if ($receipts_uploaded) {
-                            $receipts = $conn->query("SELECT * FROM propane_receipts WHERE bill_id = $bill_id ORDER BY upload_date DESC");
-                        }
-                        echo "<div class='receipt-list'>";
-                        echo "<strong>Uploaded Receipts:</strong><br>";
-                        while ($receipt = $receipts->fetch_assoc()) {
-                            $rfn = htmlspecialchars($receipt['filename']);
-                            $rpath = "uploads/receipts/" . $rfn;
-                            $rdate = date('M j, Y g:i A', strtotime($receipt['upload_date']));
-                            echo "<a href='$rpath' target='_blank' class='receipt-link'>$rfn - $rdate</a>";
-                        }
-                        echo "</div>";
-                    }
-
-                    echo "</div>";
+                    hds_render_utility_bill_entry($conn, $house_id, $bill, 'propane', $open_bill_id);
                 }
             } else {
                 echo "<p class='empty-note'>No propane bills recorded yet.</p>";
@@ -399,4 +356,33 @@ if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'
     </details>
     <?php endif; ?>
 
+</div>
+
+<?php
+$water_rename_action = 'house.php?id=' . (int)$house_id . '&tab=utility';
+?>
+<div id="waterDocRenameModal" class="media-rename-modal" hidden aria-hidden="true">
+    <div class="media-rename-backdrop" data-water-doc-rename-close></div>
+    <div class="media-rename-dialog" role="dialog" aria-modal="true" aria-labelledby="waterDocRenameTitle">
+        <button type="button" class="media-rename-close" data-water-doc-rename-close aria-label="Close">&times;</button>
+        <h3 id="waterDocRenameTitle">Rename File</h3>
+        <p class="media-rename-current-row">
+            <span class="media-rename-label">Current name:</span>
+            <span id="waterDocRenameCurrent" class="media-rename-current"></span>
+        </p>
+        <form method="post" id="waterDocRenameForm" action="<?php echo htmlspecialchars($water_rename_action, ENT_QUOTES, 'UTF-8'); ?>">
+            <input type="hidden" name="water_doc_id" id="waterDocRenameDocId" value="">
+            <input type="hidden" name="bill_id" id="waterDocRenameBillId" value="">
+            <input type="hidden" name="utility_type" id="waterDocRenameUtilityType" value="water">
+            <label for="waterDocRenameNew">New name:</label>
+            <div class="media-rename-input-row">
+                <input type="text" name="water_doc_basename" id="waterDocRenameNew" required autocomplete="off" placeholder="Enter name without extension">
+                <span id="waterDocRenameExt" class="media-rename-ext"></span>
+            </div>
+            <div class="media-rename-actions">
+                <button type="button" class="small-btn" data-water-doc-rename-close>Cancel</button>
+                <input type="submit" name="rename_water_doc" value="Save" class="media-rename-save">
+            </div>
+        </form>
+    </div>
 </div>

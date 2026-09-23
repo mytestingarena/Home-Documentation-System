@@ -16,19 +16,6 @@ if (isset($_POST['add_house']) && !empty(trim($_POST['house_name']))) {
 }
 
 // Handle DELETE house
-$export_message = '';
-if (isset($_GET['export_error'])) {
-    $export_errors = [
-        'confirm' => 'Export cancelled — you must type confirm exactly.',
-        'house' => 'Export failed — house not found.',
-        'format' => 'Export failed — choose spreadsheet or PDF.',
-    ];
-    $code = $_GET['export_error'];
-    if (isset($export_errors[$code])) {
-        $export_message = "<p class='export-error-msg'>" . htmlspecialchars($export_errors[$code], ENT_QUOTES, 'UTF-8') . "</p>";
-    }
-}
-
 $delete_message = '';
 if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['confirm_delete'])) {
     $confirm = strtolower(trim($_POST['confirm_delete']));
@@ -64,6 +51,10 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
                             $path = 'uploads/receipts/' . $receipt['filename'];
                             if (file_exists($path)) {
                                 unlink($path);
+                            }
+                            $thumb = 'uploads/receipts/thumbs/' . pathinfo($receipt['filename'], PATHINFO_FILENAME) . '.png';
+                            if (file_exists($thumb)) {
+                                unlink($thumb);
                             }
                         }
                     }
@@ -174,7 +165,6 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
 
     <?php
     if ($add_message) echo $add_message;
-    if ($export_message) echo $export_message;
     if ($delete_message) echo $delete_message;
     ?>
 
@@ -187,44 +177,6 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
         }
     }
     ?>
-
-    <div class="houses-admin-row">
-        <div class="section-card houses-admin-card">
-            <h3>Add New House</h3>
-            <form method="post">
-                <input type="text" name="house_name" placeholder="House name (e.g. Main House, Lake Cabin)" required style="width:100%; padding:12px; margin-bottom:10px; border-radius:6px; border:1px solid #ccc;">
-                <input type="submit" name="add_house" value="Add House" style="background:#3498db; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; width:100%;">
-            </form>
-        </div>
-
-        <div class="section-card houses-admin-card">
-            <h3>Export House Data</h3>
-            <p class="house-export-hint">Choose a house first, then pick a format for realtor handoff.</p>
-            <?php if (count($houses) > 0): ?>
-            <form method="post" action="export-house.php" class="house-export-form" id="houseExportForm">
-                <label class="house-export-label" for="export_house_id">House</label>
-                <select name="house_id" id="export_house_id" class="house-export-select" required>
-                    <option value="">Select a house...</option>
-                    <?php foreach ($houses as $house): ?>
-                        <option value="<?php echo (int)$house['id']; ?>"><?php echo htmlspecialchars($house['name'], ENT_QUOTES, 'UTF-8'); ?></option>
-                    <?php endforeach; ?>
-                </select>
-
-                <div class="house-export-options" id="houseExportOptions" hidden>
-                    <p class="house-export-label">Format</p>
-                    <div class="house-export-format">
-                        <label class="house-export-choice"><input type="radio" name="export_format" value="spreadsheet" checked> Spreadsheet workbook (.xlsx)</label>
-                        <label class="house-export-choice"><input type="radio" name="export_format" value="pdf"> Printable PDF summary</label>
-                    </div>
-                    <input type="text" name="export_confirm" class="house-export-confirm" placeholder="Type confirm to export" autocomplete="off">
-                    <input type="submit" name="export_house" value="Export Data" class="house-export-btn">
-                </div>
-            </form>
-            <?php else: ?>
-            <p class="empty-note">Add a house above before exporting.</p>
-            <?php endif; ?>
-        </div>
-    </div>
 
     <!-- Houses Grid -->
     <div class="houses-grid">
@@ -245,24 +197,20 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
                 echo "</div>";
             }
         } else {
-            echo "<p style='text-align:center; color:#777;'>No houses found. Add one above!</p>";
+            echo "<p style='text-align:center; color:#777;'>No houses found. Add one below.</p>";
         }
         ?>
     </div>
 
+    <div class="section-card" style="margin-top:30px; max-width:500px; margin-left:auto; margin-right:auto;">
+        <h3>Add New House</h3>
+        <form method="post">
+            <input type="text" name="house_name" placeholder="House name (e.g. Main House, Lake Cabin)" required style="width:100%; padding:12px; margin-bottom:10px; border-radius:6px; border:1px solid #ccc;">
+            <input type="submit" name="add_house" value="Add House" style="background:#3498db; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; width:100%;">
+        </form>
+    </div>
+
 </div>
 <?php include __DIR__ . '/includes/site-footer.php'; ?>
-<script>
-(function() {
-  var select = document.getElementById("export_house_id");
-  var options = document.getElementById("houseExportOptions");
-  if (!select || !options) return;
-  function toggleExportOptions() {
-    options.hidden = !select.value;
-  }
-  select.addEventListener("change", toggleExportOptions);
-  toggleExportOptions();
-})();
-</script>
 </body>
 </html>

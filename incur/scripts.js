@@ -164,6 +164,7 @@ document.addEventListener("DOMContentLoaded", function() {
   initHouseRenameModal();
   initPermLogRenameModal();
   initFirearmRenameModal();
+  initWaterDocRenameModal();
   initViewEdit();
   initPermanentLogContractorFields();
   initHouseholdTypeFields();
@@ -187,6 +188,7 @@ function scrollToOpenSection() {
     ["open_equipment", "maintenance-eq-"],
     ["open_tool", "tool-"],
     ["open_panel", "panel-"],
+    ["open_bill", "bill-"],
     ["open_utility", "utility-"],
     ["open_media", "media-"],
     ["open_permanent", "permanent-"],
@@ -681,6 +683,79 @@ function initFirearmRenameModal() {
       return;
     }
     var openBtn = evt.target.closest(".firearm-rename-open");
+    if (openBtn) {
+      openRenameModal(openBtn);
+    }
+  });
+
+  document.addEventListener("keydown", function(evt) {
+    if (modal.hidden) return;
+    if (evt.key === "Escape") closeRenameModal();
+  });
+}
+
+function initWaterDocRenameModal() {
+  var modal = document.getElementById("waterDocRenameModal");
+  if (!modal) return;
+
+  if (modal.parentElement && modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  var currentEl = document.getElementById("waterDocRenameCurrent");
+  var docIdEl = document.getElementById("waterDocRenameDocId");
+  var billIdEl = document.getElementById("waterDocRenameBillId");
+  var typeEl = document.getElementById("waterDocRenameUtilityType");
+  var newNameEl = document.getElementById("waterDocRenameNew");
+  var extEl = document.getElementById("waterDocRenameExt");
+
+  function splitFilename(filename) {
+    var lastDot = filename.lastIndexOf(".");
+    if (lastDot <= 0) {
+      return { base: filename, ext: "" };
+    }
+    return {
+      base: filename.substring(0, lastDot),
+      ext: filename.substring(lastDot)
+    };
+  }
+
+  function openRenameModal(button) {
+    var filename = button.getAttribute("data-filename") || "";
+    var suggested = button.getAttribute("data-rename-base") || "";
+    var docId = button.getAttribute("data-water-doc-id") || "";
+    var billId = button.getAttribute("data-bill-id") || "";
+    var utilityType = button.getAttribute("data-utility-type") || "water";
+    var parts = splitFilename(filename);
+    if (currentEl) currentEl.textContent = filename;
+    if (docIdEl) docIdEl.value = docId;
+    if (billIdEl) billIdEl.value = billId;
+    if (typeEl) typeEl.value = utilityType;
+    if (extEl) extEl.textContent = parts.ext;
+    if (newNameEl) {
+      newNameEl.value = suggested || parts.base;
+      setTimeout(function() {
+        newNameEl.focus();
+        newNameEl.select();
+      }, 0);
+    }
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("media-rename-active");
+  }
+
+  function closeRenameModal() {
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("media-rename-active");
+  }
+
+  document.addEventListener("click", function(evt) {
+    if (evt.target.closest("[data-water-doc-rename-close]")) {
+      closeRenameModal();
+      return;
+    }
+    var openBtn = evt.target.closest(".water-doc-rename-open");
     if (openBtn) {
       openRenameModal(openBtn);
     }

@@ -21,7 +21,7 @@ function hds_ui_nav_groups(): array {
         ],
         'system' => [
             'label' => 'System',
-            'tabs' => ['wifi', 'admin'],
+            'tabs' => ['export', 'wifi', 'admin'],
         ],
     ];
 }
@@ -42,6 +42,7 @@ function hds_ui_registry(): array {
             'manuals'     => ['label' => 'User Manuals',    'icon' => 'fa-book'],
             'map'         => ['label' => 'Map Location',      'icon' => 'fa-map-marker-alt'],
             'wifi'        => ['label' => 'WiFi',              'icon' => 'fa-wifi'],
+            'export'      => ['label' => 'Export',            'icon' => 'fa-download'],
             'projects'    => ['label' => 'Project List',      'icon' => 'fa-tasks'],
         ],
         'sections' => [

@@ -19,6 +19,7 @@ require_once __DIR__ . '/includes/outdoor-work-images.php';
 require_once __DIR__ . '/includes/house-work-images.php';
 require_once __DIR__ . '/includes/homelab.php';
 require_once __DIR__ . '/includes/firearms.php';
+require_once __DIR__ . '/includes/utility-docs.php';
 require_once __DIR__ . '/includes/sidebar-nav.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -39,7 +40,7 @@ if ($result->num_rows == 0) {
 $house = $result->fetch_assoc();
 $house_name = htmlspecialchars($house['name'] ?? 'Unknown House');
 
-$valid_tabs = ['permanent', 'utility', 'household', 'contractors', 'homelab', 'tools', 'firearms', 'maintenance', 'media', 'designs', 'manuals', 'map', 'wifi', 'projects', 'admin'];
+$valid_tabs = ['permanent', 'utility', 'household', 'contractors', 'homelab', 'tools', 'firearms', 'maintenance', 'media', 'designs', 'manuals', 'map', 'wifi', 'export', 'projects', 'admin'];
 $hds_ui_settings = hds_ui_load_settings($conn, $house_id);
 $active_tab = $_GET['tab'] ?? 'permanent';
 if (!in_array($active_tab, $valid_tabs, true)) {
@@ -49,7 +50,7 @@ if ($active_tab !== 'admin' && !hds_ui_tab_enabled($active_tab, $hds_ui_settings
     $active_tab = hds_ui_first_enabled_tab($hds_ui_settings);
 }
 
-function house_redirect(int $house_id, string $tab = 'permanent', $open_section = 0, string $open_param = 'open_equipment'): void {
+function house_redirect(int $house_id, string $tab = 'permanent', $open_section = 0, string $open_param = 'open_equipment', array $extra = []): void {
     global $valid_tabs;
     if (!in_array($tab, $valid_tabs, true)) {
         $tab = 'permanent';
@@ -57,6 +58,12 @@ function house_redirect(int $house_id, string $tab = 'permanent', $open_section 
     $url = 'house.php?id=' . $house_id . '&tab=' . urlencode($tab);
     if ($open_param !== '' && $open_section !== 0 && $open_section !== '') {
         $url .= '&' . urlencode($open_param) . '=' . urlencode((string)$open_section);
+    }
+    foreach ($extra as $key => $value) {
+        if ($value === '' || $value === null) {
+            continue;
+        }
+        $url .= '&' . urlencode((string)$key) . '=' . urlencode((string)$value);
     }
     header('Location: ' . $url);
     exit;
@@ -823,15 +830,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $billing_frequency = in_array($_POST['billing_frequency'] ?? 'Monthly', ['Monthly', 'Quarterly', 'Annual'], true)
             ? $_POST['billing_frequency'] : 'Monthly';
         $phone = mysqli_real_escape_string($conn, $_POST['phone'] ?? '');
+        $payment_url = mysqli_real_escape_string($conn, hds_utility_normalize_url($_POST['payment_url'] ?? ''));
 
-        $conn->query("INSERT INTO water_utilities (house_id, account_number, meter_number, billing_frequency, phone)
-                      VALUES ($house_id, '$account_number', '$meter_number', '$billing_frequency', '$phone')
+        $conn->query("INSERT INTO water_utilities (house_id, account_number, meter_number, billing_frequency, phone, payment_url)
+                      VALUES ($house_id, '$account_number', '$meter_number', '$billing_frequency', '$phone', '$payment_url')
                       ON DUPLICATE KEY UPDATE
                       account_number=VALUES(account_number),
                       meter_number=VALUES(meter_number),
                       billing_frequency=VALUES(billing_frequency),
-                      phone=VALUES(phone)");
-        house_redirect($house_id, 'utility');
+                      phone=VALUES(phone),
+                      payment_url=VALUES(payment_url)");
+        house_redirect($house_id, 'utility', 'water', 'open_utility');
     }
 
     // WATER UTILITY - SAVE NEW BILL
@@ -841,8 +850,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $due_date    = mysqli_real_escape_string($conn, $_POST['due_date']);
             $conn->query("INSERT INTO utility_bills (house_id, utility_type, amount_owed, due_date, is_paid)
                           VALUES ($house_id, 'water', $amount_owed, '$due_date', 0)");
+            $new_bill_id = (int)$conn->insert_id;
+            if ($new_bill_id > 0) {
+                hds_utility_docs_upload($conn, $new_bill_id, 'bill', 'water_bill_pdf');
+            }
         }
-        house_redirect($house_id, 'utility');
+        house_redirect($house_id, 'utility', 'water', 'open_utility', !empty($new_bill_id) ? ['open_bill' => $new_bill_id] : []);
     }
 
     // UTILITY BILL - TOGGLE PAID STATUS
@@ -875,10 +888,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $receipts = $conn->query("SELECT filename FROM $receipt_table WHERE bill_id = $bill_id");
                 if ($receipts) {
                     while ($receipt = $receipts->fetch_assoc()) {
-                        $path = 'uploads/receipts/' . $receipt['filename'];
-                        if (file_exists($path)) {
-                            unlink($path);
-                        }
+                        hds_utility_doc_delete_files($receipt['filename']);
                     }
                 }
             }
@@ -1754,53 +1764,88 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         house_redirect($house_id, 'map');
     }
 
-    // WATER BILL RECEIPT UPLOAD
-    if (isset($_POST['upload_receipt']) && !empty($_FILES['receipts']['name'][0])) {
+    // WATER BILL PDF UPLOAD (invoice copy)
+    if (isset($_POST['upload_water_bill_pdf'])) {
         $bill_id = intval($_POST['bill_id'] ?? 0);
-        $target_dir = "uploads/receipts/";
-        if (!is_dir($target_dir)) mkdir($target_dir, 0775, true);
+        if (hds_utility_bill_owned($conn, $bill_id, $house_id, 'water')) {
+            hds_utility_docs_upload($conn, $bill_id, 'bill', 'water_bills');
+        }
+        house_redirect($house_id, 'utility', 'water', 'open_utility', $bill_id > 0 ? ['open_bill' => $bill_id] : []);
+    }
 
-        $count = 0;
-        $max = 5;
-        $allowed = ['pdf'];
+    // WATER BILL RECEIPT UPLOAD
+    if (isset($_POST['upload_receipt'])) {
+        $bill_id = intval($_POST['bill_id'] ?? 0);
+        if (hds_utility_bill_owned($conn, $bill_id, $house_id, 'water')) {
+            hds_utility_docs_upload($conn, $bill_id, 'receipt', 'receipts');
+        }
+        house_redirect($house_id, 'utility', 'water', 'open_utility', $bill_id > 0 ? ['open_bill' => $bill_id] : []);
+    }
 
-        foreach ($_FILES['receipts']['tmp_name'] as $k => $tmp) {
-            if ($count >= $max) break;
-            if ($_FILES['receipts']['error'][$k] !== UPLOAD_ERR_OK) continue;
-
-            $original_name = basename($_FILES['receipts']['name'][$k]);
-            $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
-            $name_without_ext = pathinfo($original_name, PATHINFO_FILENAME);
-
-            if (in_array($ext, $allowed)) {
-                $new_name = $name_without_ext . '_' . time() . '.' . $ext;
-                $target = $target_dir . $new_name;
-
-                if (move_uploaded_file($tmp, $target)) {
-                    $sql = "INSERT INTO water_receipts (bill_id, filename, upload_date) VALUES ($bill_id, '$new_name', NOW())";
-                    $conn->query($sql);
-                    $count++;
-                }
+    // WATER / PROPANE BILL / RECEIPT PDF DELETE
+    if (isset($_POST['delete_water_doc'])) {
+        $bill_id = intval($_POST['bill_id'] ?? 0);
+        $doc_id = intval($_POST['water_doc_id'] ?? 0);
+        $utility_type = hds_utility_normalize_type($_POST['utility_type'] ?? 'water');
+        $table = hds_utility_docs_table($utility_type);
+        if ($doc_id > 0 && hds_utility_bill_owned($conn, $bill_id, $house_id, $utility_type)) {
+            $row = $conn->query(
+                "SELECT filename FROM $table WHERE id=$doc_id AND bill_id=$bill_id LIMIT 1"
+            );
+            if ($row && ($doc = $row->fetch_assoc())) {
+                hds_utility_doc_delete_files($doc['filename']);
+                $conn->query("DELETE FROM $table WHERE id=$doc_id AND bill_id=$bill_id");
             }
         }
+        house_redirect($house_id, 'utility', $utility_type, 'open_utility', $bill_id > 0 ? ['open_bill' => $bill_id] : []);
+    }
 
-        house_redirect($house_id, 'utility');
+    // WATER / PROPANE BILL / RECEIPT RENAME
+    if (isset($_POST['rename_water_doc'])) {
+        $bill_id = intval($_POST['bill_id'] ?? 0);
+        $doc_id = intval($_POST['water_doc_id'] ?? 0);
+        $utility_type = hds_utility_normalize_type($_POST['utility_type'] ?? 'water');
+        $table = hds_utility_docs_table($utility_type);
+        $new_basename_raw = trim($_POST['water_doc_basename'] ?? '');
+
+        if ($doc_id > 0 && $new_basename_raw !== '' && hds_utility_bill_owned($conn, $bill_id, $house_id, $utility_type)) {
+            $result = $conn->query(
+                "SELECT filename FROM $table WHERE id=$doc_id AND bill_id=$bill_id LIMIT 1"
+            );
+            if ($result && ($row = $result->fetch_assoc())) {
+                $renamed = hds_utility_doc_rename($row['filename'], $new_basename_raw);
+                if (!empty($renamed['ok'])) {
+                    $safe_name = mysqli_real_escape_string($conn, $renamed['filename']);
+                    $conn->query("UPDATE $table SET filename='$safe_name' WHERE id=$doc_id AND bill_id=$bill_id");
+                    if ($renamed['filename'] !== $row['filename']) {
+                        $_SESSION['utility_doc_success'] = 'File renamed successfully.';
+                    }
+                } else {
+                    $_SESSION['utility_doc_error'] = $renamed['error'] ?? 'Could not rename the file.';
+                }
+            }
+        } else {
+            $_SESSION['utility_doc_error'] = 'Please enter a new file name.';
+        }
+        house_redirect($house_id, 'utility', $utility_type, 'open_utility', $bill_id > 0 ? ['open_bill' => $bill_id] : []);
     }
 
     // PROPANE ACCOUNT SAVE
     if (isset($_POST['save_propane_account'])) {
         $gallons   = floatval($_POST['gallons'] ?? 0);
+        $account_number = mysqli_real_escape_string($conn, $_POST['account_number'] ?? '');
         $provider  = mysqli_real_escape_string($conn, $_POST['provider'] ?? '');
         $tank_sn   = mysqli_real_escape_string($conn, $_POST['tank_sn'] ?? '');
         $phone     = mysqli_real_escape_string($conn, $_POST['phone'] ?? '');
+        $payment_url = mysqli_real_escape_string($conn, hds_utility_normalize_url($_POST['payment_url'] ?? ''));
 
-        $sql = "INSERT INTO propane_utilities (house_id, gallons, provider, tank_sn, phone)
-                VALUES ($house_id, $gallons, '$provider', '$tank_sn', '$phone')
+        $sql = "INSERT INTO propane_utilities (house_id, gallons, account_number, provider, tank_sn, phone, payment_url)
+                VALUES ($house_id, $gallons, '$account_number', '$provider', '$tank_sn', '$phone', '$payment_url')
                 ON DUPLICATE KEY UPDATE
-                gallons = $gallons, provider = '$provider', tank_sn = '$tank_sn', phone = '$phone'";
+                gallons = $gallons, account_number = '$account_number', provider = '$provider', tank_sn = '$tank_sn', phone = '$phone', payment_url = '$payment_url'";
         $conn->query($sql);
 
-        house_redirect($house_id, 'utility');
+        house_redirect($house_id, 'utility', 'propane', 'open_utility');
     }
 
     // PROPANE BILL SAVE
@@ -1811,41 +1856,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $sql = "INSERT INTO utility_bills (house_id, utility_type, amount_owed, due_date, is_paid)
                 VALUES ($house_id, 'propane', $amount_owed, '$due_date', 0)";
         $conn->query($sql);
+        $new_bill_id = (int)$conn->insert_id;
+        if ($new_bill_id > 0) {
+            hds_utility_docs_upload($conn, $new_bill_id, 'bill', 'propane_bill_pdf', 'propane');
+        }
 
-        house_redirect($house_id, 'utility');
+        house_redirect($house_id, 'utility', 'propane', 'open_utility', $new_bill_id > 0 ? ['open_bill' => $new_bill_id] : []);
+    }
+
+    // PROPANE BILL PDF UPLOAD
+    if (isset($_POST['upload_propane_bill_pdf'])) {
+        $bill_id = intval($_POST['bill_id'] ?? 0);
+        if (hds_utility_bill_owned($conn, $bill_id, $house_id, 'propane')) {
+            hds_utility_docs_upload($conn, $bill_id, 'bill', 'propane_bills', 'propane');
+        }
+        house_redirect($house_id, 'utility', 'propane', 'open_utility', $bill_id > 0 ? ['open_bill' => $bill_id] : []);
     }
 
     // PROPANE BILL RECEIPT UPLOAD
-    if (isset($_POST['upload_propane_receipt']) && !empty($_FILES['receipts']['name'][0])) {
+    if (isset($_POST['upload_propane_receipt'])) {
         $bill_id = intval($_POST['bill_id'] ?? 0);
-        $target_dir = "uploads/receipts/";
-        if (!is_dir($target_dir)) mkdir($target_dir, 0775, true);
-
-        $count = 0;
-        $max = 5;
-        $allowed = ['pdf'];
-
-        foreach ($_FILES['receipts']['tmp_name'] as $k => $tmp) {
-            if ($count >= $max) break;
-            if ($_FILES['receipts']['error'][$k] !== UPLOAD_ERR_OK) continue;
-
-            $original_name = basename($_FILES['receipts']['name'][$k]);
-            $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
-            $name_without_ext = pathinfo($original_name, PATHINFO_FILENAME);
-
-            if (in_array($ext, $allowed)) {
-                $new_name = $name_without_ext . '_' . time() . '.' . $ext;
-                $target = $target_dir . $new_name;
-
-                if (move_uploaded_file($tmp, $target)) {
-                    $sql = "INSERT INTO propane_receipts (bill_id, filename, upload_date) VALUES ($bill_id, '$new_name', NOW())";
-                    $conn->query($sql);
-                    $count++;
-                }
-            }
+        if (hds_utility_bill_owned($conn, $bill_id, $house_id, 'propane')) {
+            hds_utility_docs_upload($conn, $bill_id, 'receipt', 'propane_receipts', 'propane');
         }
-
-        house_redirect($house_id, 'utility');
+        house_redirect($house_id, 'utility', 'propane', 'open_utility', $bill_id > 0 ? ['open_bill' => $bill_id] : []);
     }
 
     // PROJECT LIST - ADD NEW PROJECT
@@ -1914,8 +1948,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260823b">
-    <script src="scripts.js?v=20260823a"></script>
+    <link rel="stylesheet" href="styles.css?v=20260910g">
+    <script src="scripts.js?v=20260910f"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>

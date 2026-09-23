@@ -232,6 +232,7 @@ CREATE TABLE IF NOT EXISTS water_utilities (
     meter_number VARCHAR(50) DEFAULT NULL,
     billing_frequency ENUM('Monthly','Quarterly','Annual') DEFAULT 'Monthly',
     phone VARCHAR(20) DEFAULT NULL,
+    payment_url VARCHAR(500) DEFAULT NULL,
     UNIQUE KEY unique_house (house_id),
     FOREIGN KEY (house_id) REFERENCES houses(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -240,9 +241,11 @@ CREATE TABLE IF NOT EXISTS propane_utilities (
     id INT AUTO_INCREMENT PRIMARY KEY,
     house_id INT NOT NULL,
     gallons DECIMAL(10,1) DEFAULT 0.0,
+    account_number VARCHAR(50) DEFAULT NULL,
     provider VARCHAR(100) DEFAULT NULL,
     tank_sn VARCHAR(100) DEFAULT NULL,
     phone VARCHAR(50) DEFAULT NULL,
+    payment_url VARCHAR(500) DEFAULT NULL,
     UNIQUE KEY unique_house (house_id),
     FOREIGN KEY (house_id) REFERENCES houses(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -251,6 +254,7 @@ CREATE TABLE IF NOT EXISTS water_receipts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     bill_id INT NOT NULL,
     filename VARCHAR(255) NOT NULL,
+    doc_type ENUM('receipt', 'bill') NOT NULL DEFAULT 'receipt',
     upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (bill_id) REFERENCES utility_bills(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -259,6 +263,7 @@ CREATE TABLE IF NOT EXISTS propane_receipts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     bill_id INT NOT NULL,
     filename VARCHAR(255) NOT NULL,
+    doc_type ENUM('receipt', 'bill') NOT NULL DEFAULT 'receipt',
     upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (bill_id) REFERENCES utility_bills(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
