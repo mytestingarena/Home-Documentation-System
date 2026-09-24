@@ -3461,7 +3461,7 @@ body.design-viewer-active {
     }
 }
 
-/* Projects list — compact draw.io + receipts upload row */
+/* Projects list — compact draw.io + receipts upload rows (match materials form density) */
 .project-item {
     margin-bottom: 1.25rem;
     padding-bottom: 1rem;
@@ -3469,9 +3469,8 @@ body.design-viewer-active {
 }
 .project-uploads {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px 18px;
-    align-items: center;
+    flex-direction: column;
+    gap: 10px;
     margin: 8px 0 12px;
     padding: 8px 10px;
     background: #f8fafc;
@@ -3480,20 +3479,62 @@ body.design-viewer-active {
 }
 .project-upload-form {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 6px 8px;
+    gap: 8px;
     margin: 0;
+    min-width: 0;
 }
 .project-upload-label {
+    flex: 0 0 4.75em;
     font-weight: 600;
     font-size: 0.85em;
     color: #334155;
-    min-width: 4.5em;
+    line-height: 1.2;
 }
+.project-upload-file,
 .project-upload-form input[type="file"] {
-    max-width: 14rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 18rem;
+    font-size: 0.8em;
+    color: #64748b;
+}
+.project-upload-file::file-selector-button,
+.project-upload-form input[type="file"]::file-selector-button {
+    margin-right: 8px;
+    padding: 4px 10px;
     font-size: 0.85em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f8f9fa;
+    cursor: pointer;
+}
+.project-upload-file::-webkit-file-upload-button,
+.project-upload-form input[type="file"]::-webkit-file-upload-button {
+    margin-right: 8px;
+    padding: 4px 10px;
+    font-size: 0.85em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f8f9fa;
+    cursor: pointer;
+}
+.project-upload-form .small-btn {
+    flex: 0 0 auto;
+}
+/* Side-by-side when there is room; stay stacked on narrow viewports */
+@media (min-width: 720px) {
+    .project-uploads {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 20px;
+    }
+    .project-upload-form {
+        flex: 1 1 280px;
+        max-width: 100%;
+    }
 }
 .project-receipts-list {
     margin: 6px 0 4px;
