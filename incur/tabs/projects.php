@@ -1,7 +1,7 @@
 <?php
 // tabs/projects.php — Project List tab (quantity × price fixed, material delete, tax 5.5%)
 // Per-project uploads: .drawio → Designs storage; receipts → shared receipts storage.
-// Each project is a collapsible details card (active open by default, completed collapsed).
+// Each project is a collapsible details card (collapsed by default).
 
 global $conn, $house_id, $hds_ui_settings;
 
@@ -96,7 +96,7 @@ function hds_project_totals_block(float $subtotal): array
 /**
  * Render one collapsible project card.
  *
- * @param bool $completed  Completed projects default collapsed; active default open.
+ * @param bool $completed  Whether the project is completed.
  * @param bool $allow_edit Whether materials can be added/deleted and Mark Completed shown.
  */
 function hds_render_project_card(mysqli $conn, array $project, bool $completed, bool $allow_edit): void
@@ -120,7 +120,7 @@ function hds_render_project_card(mysqli $conn, array $project, bool $completed, 
         $date_label = "Added: $date";
         $status_label = 'Active';
         $status_class = 'project-status-badge project-status-badge--active';
-        $open_attr = ' open';
+        $open_attr = '';
         $card_mod = 'project-card--active';
     }
 
