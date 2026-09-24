@@ -157,6 +157,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   initMobileHeaderScroll();
   activateTab(getInitialTab());
+  initProjectCollapsePersist();
   scrollToOpenSection();
   initMediaLightbox();
   initMediaRenameModal();
@@ -183,6 +184,35 @@ function maintenanceExpandAll(expand) {
   collapsibleExpandAll(".maintenance-list .collapsible-section", expand);
 }
 
+/** Persist Projects tab open/closed state by project id (localStorage). */
+function initProjectCollapsePersist() {
+  var cards = document.querySelectorAll(".projects-list .project-card[data-project-id]");
+  if (!cards.length) return;
+
+  var prefix = "hds-project-open-";
+  for (var i = 0; i < cards.length; i++) {
+    (function(card) {
+      var id = card.getAttribute("data-project-id");
+      if (!id) return;
+      var key = prefix + id;
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === "1") {
+          card.open = true;
+        } else if (saved === "0") {
+          card.open = false;
+        }
+      } catch (e) { /* ignore quota / private mode */ }
+
+      card.addEventListener("toggle", function() {
+        try {
+          localStorage.setItem(key, card.open ? "1" : "0");
+        } catch (err) { /* ignore */ }
+      });
+    })(cards[i]);
+  }
+}
+
 function scrollToOpenSection() {
   var params = new URLSearchParams(window.location.search);
   var scrollKeys = [
@@ -194,7 +224,8 @@ function scrollToOpenSection() {
     ["open_media", "media-"],
     ["open_permanent", "permanent-"],
     ["open_homelab", "homelab-"],
-    ["open_firearm", "firearm-"]
+    ["open_firearm", "firearm-"],
+    ["open_project", "project-"]
   ];
 
   for (var i = 0; i < scrollKeys.length; i++) {

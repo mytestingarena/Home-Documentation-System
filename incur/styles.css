@@ -3461,11 +3461,79 @@ body.design-viewer-active {
     }
 }
 
-/* Projects list — two-line upload blocks: label, then Browse + Upload inline */
-.project-item {
-    margin-bottom: 1.25rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #e5e7eb;
+/* Projects list — collapsible cards + two-line upload blocks */
+.projects-section-title {
+    margin: 18px 0 6px;
+    color: #2c3e50;
+}
+
+.projects-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.project-card.collapsible-section {
+    margin-bottom: 0;
+}
+
+.project-card--active {
+    border-left: 4px solid #2980b9;
+}
+
+.project-card--completed {
+    border-left: 4px solid #7f8c8d;
+}
+
+.project-card--active .collapsible-chevron {
+    color: #2980b9;
+}
+
+.project-card--completed .collapsible-chevron {
+    color: #7f8c8d;
+}
+
+.project-status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.78em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+}
+
+.project-status-badge--active {
+    background: #e8f4fc;
+    color: #1a6a9a;
+}
+
+.project-status-badge--completed {
+    background: #eef1f3;
+    color: #5d6d7e;
+}
+
+.project-summary-meta {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.project-card .collapsible-summary {
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 700px) {
+    .project-summary-meta {
+        width: 100%;
+        margin-left: 24px;
+        white-space: normal;
+    }
 }
 .project-uploads {
     display: flex;
