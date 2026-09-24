@@ -124,12 +124,30 @@ function hds_render_project_card(mysqli $conn, array $project, bool $completed, 
         $card_mod = 'project-card--active';
     }
 
+    $date_added_val = '';
+    if (!empty($project['date_added'])) {
+        $date_added_val = date('Y-m-d', strtotime($project['date_added']));
+    }
+    $date_completed_val = '';
+    if (!empty($project['date_completed'])) {
+        $date_completed_val = date('Y-m-d', strtotime($project['date_completed']));
+    }
+    $completed_flag = $completed ? '1' : '0';
+    $name_attr = htmlspecialchars($project['name'], ENT_QUOTES, 'UTF-8');
+
     echo "<details class='section-card project-card collapsible-section $card_mod' id='project-$pid' data-project-id='$pid'$open_attr>";
     echo "<summary class='collapsible-summary'>";
     echo "<i class='fas fa-chevron-right collapsible-chevron' aria-hidden='true'></i>";
     echo "<span class='collapsible-summary-title'>$name</span>";
     echo "<span class='$status_class'>$status_label</span>";
     echo "<span class='project-summary-meta'>" . htmlspecialchars($date_label, ENT_QUOTES, 'UTF-8') . " · $total_label</span>";
+    echo "<button type='button' class='project-edit-open' title='Edit project' aria-label='Edit project'";
+    echo " data-project-id='$pid'";
+    echo " data-project-name=\"$name_attr\"";
+    echo " data-date-added='$date_added_val'";
+    echo " data-date-completed='$date_completed_val'";
+    echo " data-completed='$completed_flag'";
+    echo "><i class='fas fa-pen' aria-hidden='true'></i></button>";
     echo "</summary>";
     echo "<div class='collapsible-body'>";
 
@@ -269,3 +287,32 @@ if (!$completed || $completed->num_rows == 0) {
 }
 ?>
 <?php endif; ?>
+
+<!-- Edit project modal (name + dates; materials stay add/delete) -->
+<div id="projectEditModal" class="media-rename-modal" hidden aria-hidden="true">
+    <div class="media-rename-backdrop" data-project-edit-close></div>
+    <div class="media-rename-dialog" role="dialog" aria-modal="true" aria-labelledby="projectEditTitle">
+        <button type="button" class="media-rename-close" data-project-edit-close aria-label="Close">&times;</button>
+        <h3 id="projectEditTitle">Edit Project</h3>
+        <form method="post" id="projectEditForm">
+            <input type="hidden" name="project_id" id="projectEditId" value="">
+            <div class="hds-ve-field">
+                <label class="media-rename-label" for="projectEditName">Project name</label>
+                <input type="text" name="project_name" id="projectEditName" required maxlength="255" autocomplete="off" style="width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #ccc; border-radius:6px;">
+            </div>
+            <div class="hds-ve-field">
+                <label class="media-rename-label" for="projectEditDateAdded">Date added</label>
+                <input type="date" name="date_added" id="projectEditDateAdded" required style="width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #ccc; border-radius:6px;">
+            </div>
+            <div class="hds-ve-field" id="projectEditDateCompletedWrap" hidden>
+                <label class="media-rename-label" for="projectEditDateCompleted">Date completed</label>
+                <input type="date" name="date_completed" id="projectEditDateCompleted" style="width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #ccc; border-radius:6px;">
+            </div>
+            <div class="media-rename-actions" style="margin-top:16px;">
+                <button type="button" class="small-btn" data-project-edit-close>Cancel</button>
+                <input type="submit" name="update_project" value="Save" class="media-rename-save">
+            </div>
+        </form>
+    </div>
+</div>
+

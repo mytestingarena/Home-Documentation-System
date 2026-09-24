@@ -167,6 +167,7 @@ document.addEventListener("DOMContentLoaded", function() {
   initFirearmRenameModal();
   initWaterDocRenameModal();
   initDesignViewer();
+  initProjectEditModal();
   initViewEdit();
   initPermanentLogContractorFields();
   initHouseholdTypeFields();
@@ -958,6 +959,74 @@ function toggleWifiPassword(button) {
     field.type = "password";
     button.textContent = "Show";
   }
+}
+
+
+/** Edit project modal (pencil on project cards). */
+function initProjectEditModal() {
+  var modal = document.getElementById("projectEditModal");
+  if (!modal) return;
+
+  if (modal.parentElement && modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  var idInput = document.getElementById("projectEditId");
+  var nameInput = document.getElementById("projectEditName");
+  var dateAddedInput = document.getElementById("projectEditDateAdded");
+  var dateCompletedInput = document.getElementById("projectEditDateCompleted");
+  var dateCompletedWrap = document.getElementById("projectEditDateCompletedWrap");
+
+  function closeModal() {
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("media-rename-active");
+  }
+
+  function openModal(btn) {
+    if (!idInput || !nameInput || !dateAddedInput) return;
+    idInput.value = btn.getAttribute("data-project-id") || "";
+    nameInput.value = btn.getAttribute("data-project-name") || "";
+    dateAddedInput.value = btn.getAttribute("data-date-added") || "";
+    var completed = btn.getAttribute("data-completed") === "1";
+    if (dateCompletedWrap && dateCompletedInput) {
+      if (completed) {
+        dateCompletedWrap.hidden = false;
+        dateCompletedInput.value = btn.getAttribute("data-date-completed") || "";
+        dateCompletedInput.required = true;
+      } else {
+        dateCompletedWrap.hidden = true;
+        dateCompletedInput.value = "";
+        dateCompletedInput.required = false;
+      }
+    }
+    modal.hidden = false;
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("media-rename-active");
+    setTimeout(function() {
+      nameInput.focus();
+      try { nameInput.select(); } catch (e) { /* ignore */ }
+    }, 0);
+  }
+
+  document.addEventListener("click", function(evt) {
+    var openBtn = evt.target.closest(".project-edit-open");
+    if (openBtn) {
+      evt.preventDefault();
+      evt.stopPropagation();
+      openModal(openBtn);
+      return;
+    }
+    if (evt.target.closest("[data-project-edit-close]")) {
+      evt.preventDefault();
+      closeModal();
+    }
+  }, true);
+
+  document.addEventListener("keydown", function(evt) {
+    if (modal.hidden) return;
+    if (evt.key === "Escape") closeModal();
+  });
 }
 
 function initDesignViewer() {

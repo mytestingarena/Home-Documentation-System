@@ -1895,6 +1895,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         house_redirect($house_id, 'projects');
     }
 
+    // PROJECT LIST - UPDATE PROJECT (name + dates; active and completed)
+    if (isset($_POST['update_project'])) {
+        $project_id = intval($_POST['project_id'] ?? 0);
+        $project_name = trim((string)($_POST['project_name'] ?? ''));
+        $date_added = trim((string)($_POST['date_added'] ?? ''));
+        $date_completed = trim((string)($_POST['date_completed'] ?? ''));
+
+        if ($project_id > 0 && $project_name !== '') {
+            $own = $conn->prepare('SELECT id, completed FROM projects WHERE id = ? AND house_id = ? LIMIT 1');
+            if ($own) {
+                $own->bind_param('ii', $project_id, $house_id);
+                $own->execute();
+                $row = $own->get_result()->fetch_assoc();
+                $own->close();
+                if ($row) {
+                    $name_esc = mysqli_real_escape_string($conn, $project_name);
+                    $sets = ["name = '$name_esc'"];
+                    if ($date_added !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_added)) {
+                        $sets[] = "date_added = '" . mysqli_real_escape_string($conn, $date_added) . "'";
+                    }
+                    if ((int)$row['completed'] === 1) {
+                        if ($date_completed !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_completed)) {
+                            $dc = mysqli_real_escape_string($conn, $date_completed) . ' 00:00:00';
+                            $sets[] = "date_completed = '$dc'";
+                        }
+                    }
+                    $sql = 'UPDATE projects SET ' . implode(', ', $sets) . " WHERE id = $project_id AND house_id = $house_id";
+                    $conn->query($sql);
+                }
+            }
+        }
+
+        house_redirect($house_id, 'projects');
+    }
+
     // PROJECT LIST - MARK COMPLETED
     if (isset($_POST['complete_project'])) {
         $project_id = intval($_POST['project_id']);
@@ -1979,8 +2014,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $house_name; ?> - Home Documentation System</title>
-    <link rel="stylesheet" href="styles.css?v=20260923d">
-    <script src="scripts.js?v=20260923a"></script>
+    <link rel="stylesheet" href="styles.css?v=20260923e">
+    <script src="scripts.js?v=20260923b"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>

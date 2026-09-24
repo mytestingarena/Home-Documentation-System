@@ -3531,14 +3531,68 @@ body.design-viewer-active {
 }
 
 .project-card .collapsible-summary {
+    position: relative;
     gap: 10px;
     flex-wrap: wrap;
+    padding-right: 44px;
+}
+
+.project-edit-open {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+    color: #444;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.project-edit-open:hover,
+.project-edit-open:focus {
+    background: #f0f7ff;
+    border-color: #2980b9;
+    color: #1a5276;
+    outline: none;
+}
+
+.project-card--active .project-edit-open:hover,
+.project-card--active .project-edit-open:focus {
+    border-color: #c62828;
+    color: #b71c1c;
+    background: #fff5f5;
+}
+
+.project-card--completed .project-edit-open:hover,
+.project-card--completed .project-edit-open:focus {
+    border-color: #2e7d32;
+    color: #1b5e20;
+    background: #f1f8f2;
+}
+
+#projectEditModal .hds-ve-field {
+    margin-bottom: 12px;
+}
+
+#projectEditModal .hds-ve-field:last-of-type {
+    margin-bottom: 0;
 }
 
 @media (max-width: 700px) {
     .project-summary-meta {
         width: 100%;
         margin-left: 24px;
+        margin-right: 36px;
         white-space: normal;
     }
 }
