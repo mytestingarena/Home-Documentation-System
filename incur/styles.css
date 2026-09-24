@@ -3478,20 +3478,27 @@ body.design-viewer-active {
     margin-bottom: 0;
 }
 
-.project-card--active {
-    border: 3px solid #c0392b;
+/* Status outline: beat .section-card border-left (same-specificity gray) */
+.section-card.project-card.project-card--active {
+    border: 3px solid #c62828;
+    border-left: 3px solid #c62828;
+    background: #fff5f5;
+    box-shadow: 0 0 0 1px rgba(198, 40, 40, 0.25), 0 2px 10px rgba(0, 0, 0, 0.06);
 }
 
-.project-card--completed {
-    border: 3px solid #2c7a4f;
+.section-card.project-card.project-card--completed {
+    border: 3px solid #2e7d32;
+    border-left: 3px solid #2e7d32;
+    background: #f1f8f2;
+    box-shadow: 0 0 0 1px rgba(46, 125, 50, 0.25), 0 2px 10px rgba(0, 0, 0, 0.06);
 }
 
 .project-card--active .collapsible-chevron {
-    color: #c0392b;
+    color: #c62828;
 }
 
 .project-card--completed .collapsible-chevron {
-    color: #2c7a4f;
+    color: #2e7d32;
 }
 
 .project-status-badge {
@@ -3506,13 +3513,13 @@ body.design-viewer-active {
 }
 
 .project-status-badge--active {
-    background: #e8f4fc;
-    color: #1a6a9a;
+    background: #ffcdd2;
+    color: #b71c1c;
 }
 
 .project-status-badge--completed {
-    background: #eef1f3;
-    color: #5d6d7e;
+    background: #c8e6c9;
+    color: #1b5e20;
 }
 
 .project-summary-meta {
