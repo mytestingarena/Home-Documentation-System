@@ -3460,3 +3460,46 @@ body.design-viewer-active {
         min-height: 168px;
     }
 }
+
+/* Projects list — compact draw.io + receipts upload row */
+.project-item {
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+.project-uploads {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    align-items: center;
+    margin: 8px 0 12px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+.project-upload-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    margin: 0;
+}
+.project-upload-label {
+    font-weight: 600;
+    font-size: 0.85em;
+    color: #334155;
+    min-width: 4.5em;
+}
+.project-upload-form input[type="file"] {
+    max-width: 14rem;
+    font-size: 0.85em;
+}
+.project-receipts-list {
+    margin: 6px 0 4px;
+    font-size: 0.9em;
+    color: #475569;
+}
+.project-receipts-list .receipt-link {
+    font-size: 0.9em;
+}

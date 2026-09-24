@@ -1,10 +1,85 @@
 <?php
 // tabs/projects.php — Project List tab (quantity × price fixed, material delete, tax 5.5%)
+// Per-project uploads: .drawio → Designs storage; receipts → shared receipts storage.
 
 global $conn, $house_id, $hds_ui_settings;
+
+require_once __DIR__ . '/../includes/utility-docs.php';
+
+/**
+ * Compact draw.io + receipts upload row for one project.
+ */
+function hds_project_upload_controls(int $pid): void
+{
+    $accept_receipt = 'application/pdf,.pdf,image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp';
+    echo "<div class='project-uploads'>";
+
+    echo "<form method='post' enctype='multipart/form-data' class='project-upload-form'>";
+    echo "<input type='hidden' name='project_id' value='$pid'>";
+    echo "<label class='project-upload-label'>draw.io</label>";
+    echo "<input type='file' name='project_drawio' accept='.drawio,.xml,application/xml' required>";
+    echo "<input type='submit' name='upload_project_drawio' value='Upload' class='small-btn'>";
+    echo "</form>";
+
+    echo "<form method='post' enctype='multipart/form-data' class='project-upload-form'>";
+    echo "<input type='hidden' name='project_id' value='$pid'>";
+    echo "<label class='project-upload-label'>Receipts</label>";
+    echo "<input type='file' name='project_receipts[]' accept='$accept_receipt' multiple required>";
+    echo "<input type='submit' name='upload_project_receipts' value='Upload' class='small-btn'>";
+    echo "</form>";
+
+    echo "</div>";
+}
+
+/**
+ * Compact list of existing project receipts (links into uploads/receipts/).
+ */
+function hds_project_receipts_list(mysqli $conn, int $pid): void
+{
+    $res = $conn->query(
+        "SELECT id, filename, upload_date FROM project_receipts WHERE project_id = $pid ORDER BY upload_date DESC, id DESC LIMIT 8"
+    );
+    if (!$res || $res->num_rows === 0) {
+        return;
+    }
+    echo "<div class='project-receipts-list'>";
+    echo "<strong>Receipts:</strong> ";
+    $parts = [];
+    while ($row = $res->fetch_assoc()) {
+        $fn = $row['filename'];
+        $url = htmlspecialchars(hds_utility_doc_url($fn), ENT_QUOTES, 'UTF-8');
+        $label = htmlspecialchars(hds_utility_doc_display_name($fn), ENT_QUOTES, 'UTF-8');
+        if (strlen($label) > 28) {
+            $label = htmlspecialchars(substr(hds_utility_doc_display_name($fn), 0, 12) . '…' . substr(hds_utility_doc_display_name($fn), -10), ENT_QUOTES, 'UTF-8');
+        }
+        $parts[] = "<a href='$url' target='_blank' rel='noopener' class='receipt-link'>$label</a>";
+    }
+    echo implode(' · ', $parts);
+    echo "</div>";
+}
 ?>
 
 <h2>Project List</h2>
+
+<?php
+if (!empty($_SESSION['project_drawio_success'])) {
+    $msg = $_SESSION['project_drawio_success'];
+    unset($_SESSION['project_drawio_success'], $_SESSION['project_drawio_filename']);
+    echo "<p class='media-success'>" . $msg . " <a href='house.php?id=" . (int)$house_id . "&tab=designs'>View Designs</a></p>";
+}
+if (!empty($_SESSION['project_drawio_error'])) {
+    echo "<p class='media-error'>" . htmlspecialchars($_SESSION['project_drawio_error'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['project_drawio_error']);
+}
+if (!empty($_SESSION['project_receipt_success'])) {
+    echo "<p class='media-success'>" . $_SESSION['project_receipt_success'] . "</p>";
+    unset($_SESSION['project_receipt_success']);
+}
+if (!empty($_SESSION['project_receipt_error'])) {
+    echo "<p class='media-error'>" . htmlspecialchars($_SESSION['project_receipt_error'], ENT_QUOTES, 'UTF-8') . "</p>";
+    unset($_SESSION['project_receipt_error']);
+}
+?>
 
 <!-- Add New Project -->
 <div class="section-card">
@@ -24,7 +99,7 @@ global $conn, $house_id, $hds_ui_settings;
         echo "<p>No active projects yet.</p>";
     } else {
         while ($project = $projects->fetch_assoc()) {
-            $pid = $project['id'];
+            $pid = (int)$project['id'];
             $name = htmlspecialchars($project['name']);
             $date = date('M j, Y', strtotime($project['date_added']));
 
@@ -78,6 +153,9 @@ global $conn, $house_id, $hds_ui_settings;
             echo "<input type='submit' name='add_material' value='Add Material'>";
             echo "</form>";
 
+            hds_project_receipts_list($conn, $pid);
+            hds_project_upload_controls($pid);
+
             // Complete button
             echo "<form method='post' style='display:inline;'>";
             echo "<input type='hidden' name='project_id' value='$pid'>";
@@ -105,9 +183,12 @@ global $conn, $house_id, $hds_ui_settings;
         echo "<p>No completed projects yet.</p>";
     } else {
         while ($proj = $completed->fetch_assoc()) {
-            $pid = $proj['id'];
+            $pid = (int)$proj['id'];
             $name = htmlspecialchars($proj['name']);
             $date = date('M j, Y', strtotime($proj['date_completed']));
+
+            echo "<div class='project-item'>";
+            echo "<strong>$name</strong> - Completed: $date<br>";
 
             $subtotal = 0;
             $mats = $conn->query("SELECT * FROM project_materials WHERE project_id = $pid");
@@ -136,6 +217,9 @@ global $conn, $house_id, $hds_ui_settings;
             echo "<strong>Subtotal: $" . number_format($subtotal, 2) . "</strong><br>";
             echo "<strong>Sales Tax (5.5%): $" . number_format($tax, 2) . "</strong><br>";
             echo "<strong>Grand Total: $" . number_format($grand_total, 2) . "</strong><br>";
+
+            hds_project_receipts_list($conn, $pid);
+            hds_project_upload_controls($pid);
 
             // Delete button for completed projects
             echo "<form method='post' style='margin-top:10px;'>";

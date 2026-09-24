@@ -1924,6 +1924,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['delete_project'])) {
         $project_id = intval($_POST['project_id']);
 
+        // Remove project receipt files from shared uploads/receipts/ before CASCADE delete
+        require_once __DIR__ . '/includes/utility-docs.php';
+        $own = $conn->prepare('SELECT id FROM projects WHERE id = ? AND house_id = ? LIMIT 1');
+        if ($own) {
+            $own->bind_param('ii', $project_id, $house_id);
+            $own->execute();
+            $owned = $own->get_result()->fetch_assoc();
+            $own->close();
+            if ($owned) {
+                $rres = $conn->query("SELECT filename FROM project_receipts WHERE project_id = $project_id");
+                if ($rres) {
+                    while ($rrow = $rres->fetch_assoc()) {
+                        hds_utility_doc_delete_files($rrow['filename']);
+                    }
+                }
+                $conn->query("DELETE FROM project_receipts WHERE project_id = $project_id");
+            }
+        }
+
         $conn->query("DELETE FROM project_materials WHERE project_id = $project_id");
         $conn->query("DELETE FROM projects WHERE id = $project_id AND house_id = $house_id");
 
@@ -1937,6 +1956,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $conn->query("DELETE FROM project_materials WHERE id = $material_id AND project_id = $project_id");
 
+        house_redirect($house_id, 'projects');
+    }
+
+    // PROJECT LIST - UPLOAD .drawio INTO DESIGNS (same storage as Designs tab)
+    if (isset($_POST['upload_project_drawio'])) {
+        include __DIR__ . '/tabs/projects-drawio-upload.php';
+        house_redirect($house_id, 'projects');
+    }
+
+    // PROJECT LIST - UPLOAD RECEIPTS (shared uploads/receipts/ + project_receipts)
+    if (isset($_POST['upload_project_receipts'])) {
+        include __DIR__ . '/tabs/projects-receipt-upload.php';
         house_redirect($house_id, 'projects');
     }
 }

@@ -63,6 +63,21 @@ if (isset($_POST['delete_house']) && isset($_POST['house_id']) && isset($_POST['
         }
 
         // Delete child rows (order matters where CASCADE is not defined)
+        // Project receipts live in shared uploads/receipts/
+        $pr = $conn->query("SELECT filename FROM project_receipts WHERE project_id IN (SELECT id FROM projects WHERE house_id = $house_id)");
+        if ($pr) {
+            while ($prow = $pr->fetch_assoc()) {
+                $path_r = 'uploads/receipts/' . $prow['filename'];
+                if (file_exists($path_r)) {
+                    unlink($path_r);
+                }
+                $thumb = 'uploads/receipts/thumbs/' . pathinfo($prow['filename'], PATHINFO_FILENAME) . '.png';
+                if (file_exists($thumb)) {
+                    unlink($thumb);
+                }
+            }
+        }
+        $conn->query("DELETE FROM project_receipts WHERE project_id IN (SELECT id FROM projects WHERE house_id = $house_id)");
         $conn->query("DELETE FROM project_materials WHERE project_id IN (SELECT id FROM projects WHERE house_id = $house_id)");
         $conn->query("DELETE FROM projects WHERE house_id = $house_id");
         $conn->query("DELETE FROM utility_bills WHERE house_id = $house_id");
