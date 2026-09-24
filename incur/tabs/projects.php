@@ -14,19 +14,23 @@ function hds_project_upload_controls(int $pid): void
     $accept_receipt = 'application/pdf,.pdf,image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp';
     echo "<div class='project-uploads'>";
 
-    // Compact horizontal rows: label | file | Upload (matches materials form density)
+    // Two-line blocks: label alone, then Browse + Upload on one row
     echo "<form method='post' enctype='multipart/form-data' class='project-upload-form'>";
     echo "<input type='hidden' name='project_id' value='$pid'>";
-    echo "<span class='project-upload-label'>draw.io</span>";
+    echo "<span class='project-upload-label'>draw.io files accepted</span>";
+    echo "<div class='project-upload-controls'>";
     echo "<input type='file' name='project_drawio' class='project-upload-file' accept='.drawio,.xml,application/xml' required>";
     echo "<input type='submit' name='upload_project_drawio' value='Upload' class='small-btn'>";
+    echo "</div>";
     echo "</form>";
 
     echo "<form method='post' enctype='multipart/form-data' class='project-upload-form'>";
     echo "<input type='hidden' name='project_id' value='$pid'>";
-    echo "<span class='project-upload-label'>Receipts</span>";
+    echo "<span class='project-upload-label'>Receipt files accepted (PDF, JPG, PNG)</span>";
+    echo "<div class='project-upload-controls'>";
     echo "<input type='file' name='project_receipts[]' class='project-upload-file' accept='$accept_receipt' multiple required>";
     echo "<input type='submit' name='upload_project_receipts' value='Upload' class='small-btn'>";
+    echo "</div>";
     echo "</form>";
 
     echo "</div>";

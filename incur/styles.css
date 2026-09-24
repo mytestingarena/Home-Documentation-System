@@ -3461,7 +3461,7 @@ body.design-viewer-active {
     }
 }
 
-/* Projects list — compact draw.io + receipts upload rows (match materials form density) */
+/* Projects list — two-line upload blocks: label, then Browse + Upload inline */
 .project-item {
     margin-bottom: 1.25rem;
     padding-bottom: 1rem;
@@ -3470,7 +3470,7 @@ body.design-viewer-active {
 .project-uploads {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     margin: 8px 0 12px;
     padding: 8px 10px;
     background: #f8fafc;
@@ -3479,18 +3479,25 @@ body.design-viewer-active {
 }
 .project-upload-form {
     display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
     margin: 0;
     min-width: 0;
 }
 .project-upload-label {
-    flex: 0 0 4.75em;
+    display: block;
     font-weight: 600;
     font-size: 0.85em;
     color: #334155;
     line-height: 1.2;
+}
+.project-upload-controls {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
 }
 .project-upload-file,
 .project-upload-form input[type="file"] {
@@ -3523,13 +3530,13 @@ body.design-viewer-active {
 .project-upload-form .small-btn {
     flex: 0 0 auto;
 }
-/* Side-by-side when there is room; stay stacked on narrow viewports */
+/* Side-by-side upload blocks when there is room; stay stacked on narrow viewports */
 @media (min-width: 720px) {
     .project-uploads {
         flex-direction: row;
         flex-wrap: wrap;
-        align-items: center;
-        gap: 10px 20px;
+        align-items: flex-start;
+        gap: 12px 24px;
     }
     .project-upload-form {
         flex: 1 1 280px;
